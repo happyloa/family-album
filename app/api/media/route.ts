@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createFolder, listMedia, renameFile, renameFolder } from '@/lib/r2';
 
-export const runtime = 'edge';
+// The AWS SDK for JavaScript (v3) relies on Node.js APIs that aren't available
+// in the Edge runtime, so this route must run on the Node.js runtime.
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
