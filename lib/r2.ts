@@ -87,11 +87,17 @@ function buildFolderKey(path: string) {
 }
 
 function encodeKeyForUrl(key: string, base: string) {
+  const url = new URL(base);
+  const decodedBasePath = decodeURI(url.pathname || '/').replace(/\/+$/, '');
+
   const encodedKey = key
     .split('/')
+    .filter(Boolean)
     .map((segment) => encodeURIComponent(segment))
     .join('/');
-  return `${base.replace(/\/$/, '')}/${encodedKey}`;
+
+  url.pathname = [decodedBasePath, encodedKey].filter(Boolean).join('/');
+  return url.toString();
 }
 
 function encodeCopySource(bucket: string, key: string) {
