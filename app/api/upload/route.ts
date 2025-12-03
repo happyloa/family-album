@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { uploadToR2 } from '@/lib/r2';
 
-export const runtime = 'nodejs';
+export const runtime = 'edge';
 
 export async function POST(request: Request) {
   try {

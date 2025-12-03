@@ -68,7 +68,7 @@ export async function uploadToR2(file: File) {
   const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
   const client = getClient();
   const key = `media/${Date.now()}-${file.name}`;
-  const body = Buffer.from(await file.arrayBuffer());
+  const body = new Uint8Array(await file.arrayBuffer());
 
   await client.send(
     new PutObjectCommand({
