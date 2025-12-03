@@ -307,6 +307,20 @@ main {
     rgba(17, 24, 39, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.folder-card:hover,
+.folder-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow: 0 12px 45px rgba(0, 0, 0, 0.4);
+}
+
+.folder-card:focus-visible {
+  outline: 2px solid rgba(165, 180, 252, 0.7);
+  outline-offset: 3px;
 }
 
 .folder-top {
