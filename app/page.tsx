@@ -1,7 +1,12 @@
+'use client';
+
+import { useState } from 'react';
 import { MediaGrid } from '@/components/MediaGrid';
 import { UploadForm } from '@/components/UploadForm';
 
 export default function Home() {
+  const [refreshToken, setRefreshToken] = useState(0);
+
   return (
     <>
       <section className="hero">
@@ -24,7 +29,7 @@ export default function Home() {
 
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
-          <UploadForm />
+          <UploadForm onUploaded={() => setRefreshToken((value) => value + 1)} />
           <div className="card">
             <h2 style={{ marginTop: 0 }}>部署與環境變數</h2>
             <p style={{ marginTop: 0, color: 'rgba(229, 231, 235, 0.8)' }}>
@@ -45,7 +50,7 @@ export default function Home() {
         </div>
       </section>
 
-      <MediaGrid />
+      <MediaGrid refreshToken={refreshToken} />
     </>
   );
 }

@@ -1,11 +1,22 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 
-export function UploadForm({ onUploaded }: { onUploaded?: () => void }) {
+export function UploadForm({
+  onUploaded,
+  currentPath = ''
+}: {
+  onUploaded?: () => void;
+  currentPath?: string;
+}) {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [path, setPath] = useState(currentPath);
+
+  useEffect(() => {
+    setPath(currentPath);
+  }, [currentPath]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -15,6 +26,7 @@ export function UploadForm({ onUploaded }: { onUploaded?: () => void }) {
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('path', path);
 
     const response = await fetch('/api/upload', {
       method: 'POST',
@@ -26,6 +38,7 @@ export function UploadForm({ onUploaded }: { onUploaded?: () => void }) {
     } else {
       setStatus('完成！');
       setFile(null);
+      setPath(currentPath);
       onUploaded?.();
     }
     setLoading(false);
@@ -42,6 +55,16 @@ export function UploadForm({ onUploaded }: { onUploaded?: () => void }) {
         type="file"
         accept="image/*,video/*"
         onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+      />
+      <label style={{ display: 'block', marginTop: '0.75rem', color: 'rgba(229, 231, 235, 0.9)', fontWeight: 500 }}>
+        目標資料夾（預設根目錄）
+      </label>
+      <input
+        className="input"
+        type="text"
+        value={path}
+        placeholder="例如：travel/2024"
+        onChange={(event) => setPath(event.target.value)}
       />
       <button className="btn" type="submit" disabled={!file || loading}>
         {loading ? '處理中...' : '上傳檔案'}
