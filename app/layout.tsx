@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Family Album',
+  title: '我們這一家',
   description: 'A private gallery for the whole family to relive every trip together.'
 };
 

@@ -198,22 +198,20 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           <div className="grid gallery-grid">
             {folders.map((folder) => (
               <article key={folder.key} className="folder-card">
-                <div className="folder-header">
-                  <span className="pill">Folder</span>
-                  <button className="text-btn" type="button" onClick={() => promptRename(folder.key, true)}>
-                    重新命名
-                  </button>
-                </div>
-                <div className="folder-body">
+                <div className="folder-top">
                   <div className="folder-icon">📂</div>
-                  <div>
+                  <div className="folder-text">
+                    <p className="label">Folder</p>
                     <h4>{folder.name || '未命名'}</h4>
-                    <p className="muted" style={{ margin: '0.2rem 0 0' }}>{folder.key || '根目錄'}</p>
+                    <p className="muted folder-path">{folder.key || '根目錄'}</p>
                   </div>
                 </div>
                 <div className="folder-actions">
                   <button className="btn subtle" type="button" onClick={() => handleEnterFolder(folder.key)}>
                     進入資料夾
+                  </button>
+                  <button className="text-btn" type="button" onClick={() => promptRename(folder.key, true)}>
+                    重新命名
                   </button>
                 </div>
               </article>
@@ -231,22 +229,22 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           <div className="grid gallery-grid">
             {files.map((item) => (
               <article key={item.key} className="media-card">
-                {item.type === 'image' ? (
-                  <Image src={item.url} alt={item.key} fill sizes="(max-width: 768px) 100vw, 33vw" priority />
-                ) : (
-                  <video src={item.url} controls style={{ width: '100%', height: '100%' }} preload="metadata" />
-                )}
+                <div className="media-thumb">
+                  {item.type === 'image' ? (
+                    <Image src={item.url} alt={item.key} fill sizes="(max-width: 768px) 100vw, 33vw" priority />
+                  ) : (
+                    <video src={item.url} controls preload="metadata" />
+                  )}
+                </div>
                 <footer>
                   <div className="media-meta">
-                    <div>
-                      <span className="pill outline">{item.type === 'image' ? 'Image' : 'Video'}</span>
-                      <span className="media-name">{item.key.split('/').pop()}</span>
-                    </div>
+                    <span className="pill outline">{item.type === 'image' ? 'Image' : 'Video'}</span>
                     {item.size && <small className="muted">{(item.size / 1024 / 1024).toFixed(1)} MB</small>}
                   </div>
-                  <div className="media-meta" style={{ marginTop: '0.35rem' }}>
+                  <div className="media-title">{item.key.split('/').pop()}</div>
+                  <div className="media-meta">
                     {item.lastModified && <small className="muted">{new Date(item.lastModified).toLocaleString()}</small>}
-                    <button className="btn subtle" type="button" onClick={() => promptRename(item.key, false)}>
+                    <button className="text-btn" type="button" onClick={() => promptRename(item.key, false)}>
                       重新命名
                     </button>
                   </div>
