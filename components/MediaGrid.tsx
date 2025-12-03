@@ -197,7 +197,19 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           </div>
           <div className="grid gallery-grid">
             {folders.map((folder) => (
-              <article key={folder.key} className="folder-card">
+              <article
+                key={folder.key}
+                className="folder-card"
+                role="button"
+                tabIndex={0}
+                onClick={() => handleEnterFolder(folder.key)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleEnterFolder(folder.key);
+                  }
+                }}
+              >
                 <div className="folder-top">
                   <div className="folder-icon">📂</div>
                   <div className="folder-text">
@@ -207,10 +219,14 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                   </div>
                 </div>
                 <div className="folder-actions">
-                  <button className="btn subtle" type="button" onClick={() => handleEnterFolder(folder.key)}>
-                    進入資料夾
-                  </button>
-                  <button className="text-btn" type="button" onClick={() => promptRename(folder.key, true)}>
+                  <button
+                    className="text-btn"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      promptRename(folder.key, true);
+                    }}
+                  >
                     重新命名
                   </button>
                 </div>
