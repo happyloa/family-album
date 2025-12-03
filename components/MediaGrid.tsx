@@ -136,23 +136,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           </div>
         </div>
 
-        <div className="breadcrumb-row">
-          <span className="label">目前路徑</span>
-          <div className="breadcrumb">
-            <button className="crumb" onClick={() => setCurrentPrefix('')}>
-              根目錄
-            </button>
-            {breadcrumb.map((crumb) => (
-              <button key={crumb.key} className="crumb" onClick={() => setCurrentPrefix(crumb.key)}>
-                {crumb.label}
-              </button>
-            ))}
-          </div>
-          <div className="badge" style={{ marginLeft: 'auto' }}>
-            📁 {folders.length} 個資料夾 · 🖼️ {files.length} 個媒體檔案
-          </div>
-        </div>
-
         <div className="panel-grid">
           <div className="card" style={{ margin: 0 }}>
             <div className="panel-heading">
@@ -188,6 +171,23 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           目前還沒有任何媒體，先上傳一張照片或影片吧！
         </p>
       )}
+
+      <div className="breadcrumb-row" style={{ marginTop: '1rem' }}>
+        <span className="label">目前路徑</span>
+        <div className="breadcrumb">
+          <button className="crumb" onClick={() => setCurrentPrefix('')}>
+            根目錄
+          </button>
+          {breadcrumb.map((crumb) => (
+            <button key={crumb.key} className="crumb" onClick={() => setCurrentPrefix(crumb.key)}>
+              {crumb.label}
+            </button>
+          ))}
+        </div>
+        <div className="badge" style={{ marginLeft: 'auto' }}>
+          📁 {folders.length} 個資料夾 · 🖼️ {files.length} 個媒體檔案
+        </div>
+      </div>
 
       {folders.length > 0 && (
         <div className="collection">
