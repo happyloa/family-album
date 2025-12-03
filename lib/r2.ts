@@ -115,6 +115,17 @@ function ensureArray<T>(value: T | T[] | undefined): T[] {
   return Array.isArray(value) ? value : [value];
 }
 
+function readTextNode(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (typeof value === 'object' && 'value' in (value as Record<string, unknown>)) {
+    const text = (value as { value?: unknown }).value;
+    if (text === undefined || text === null) return '';
+    return String(text);
+  }
+  return '';
+}
+
 async function signedFetch(input: string, init?: RequestInit) {
   const client = getClient();
   return client.fetch(input, init);
@@ -153,25 +164,29 @@ export async function listMedia(prefix = ''): Promise<MediaListing> {
   const parsed = xmlParser.parse(xml).ListBucketResult;
 
   const folders: FolderItem[] = ensureArray(parsed.CommonPrefixes).map((item: any) => {
-    const prefixKey = item.Prefix?.value ?? '';
+    const prefixKey = readTextNode(item.Prefix);
     const relativeKey = prefixKey.replace(/\/$/, '');
     const name = relativeKey.split('/').pop() ?? relativeKey;
     return { key: relativeKey, name } as FolderItem;
   });
 
   const files: MediaFile[] = ensureArray(parsed.Contents)
-    .filter((item: any) => item.Key?.value && item.Key.value !== searchPrefix)
     .map((item: any) => {
-      const key = item.Key.value as string;
-      const relativeKey = key;
+      const key = readTextNode(item.Key);
+      if (!key || key === searchPrefix) return null;
+
+      const sizeText = readTextNode(item.Size);
+      const lastModified = readTextNode(item.LastModified) || undefined;
+
       return {
-        key: relativeKey,
+        key,
         url: encodeKeyForUrl(key, R2_PUBLIC_BASE),
         type: inferType(key),
-        size: item.Size ? Number(item.Size.value) : undefined,
-        lastModified: item.LastModified?.value
+        size: sizeText ? Number(sizeText) : undefined,
+        lastModified
       } satisfies MediaFile;
-    });
+    })
+    .filter((item): item is MediaFile => item !== null);
 
   return {
     prefix: normalizedPrefix,
@@ -296,8 +311,8 @@ export async function renameFolder(key: string, newName: string) {
     const parsed = xmlParser.parse(xml).ListBucketResult;
 
     for (const item of ensureArray(parsed.Contents)) {
-      if (!item.Key?.value) continue;
-      const sourceKey = item.Key.value as string;
+      const sourceKey = readTextNode(item.Key);
+      if (!sourceKey) continue;
       const targetKey = sourceKey.replace(sourcePrefix, targetPrefix);
 
       const copyUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${targetKey}`);
@@ -316,7 +331,8 @@ export async function renameFolder(key: string, newName: string) {
       toDelete.push(sourceKey);
     }
 
-    continuationToken = parsed.IsTruncated?.value === 'true' ? parsed.NextContinuationToken?.value : undefined;
+    const isTruncated = readTextNode(parsed.IsTruncated) === 'true';
+    continuationToken = isTruncated ? readTextNode(parsed.NextContinuationToken) || undefined : undefined;
   } while (continuationToken);
 
   while (toDelete.length > 0) {

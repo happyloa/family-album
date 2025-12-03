@@ -28,26 +28,7 @@ export default function Home() {
       </section>
 
       <section className="section" style={{ paddingTop: 0 }}>
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
-          <UploadForm onUploaded={() => setRefreshToken((value) => value + 1)} />
-          <div className="card">
-            <h2 style={{ marginTop: 0 }}>部署與環境變數</h2>
-            <p style={{ marginTop: 0, color: 'rgba(229, 231, 235, 0.8)' }}>
-              填入 Cloudflare R2 的金鑰後即可上傳。部署到 Cloudflare Pages 時，請在
-              專案設定新增以下環境變數：
-            </p>
-            <ul style={{ lineHeight: 1.6, paddingLeft: '1.25rem', color: 'rgba(229, 231, 235, 0.85)' }}>
-              <li>R2_ACCOUNT_ID</li>
-              <li>R2_ACCESS_KEY_ID</li>
-              <li>R2_SECRET_ACCESS_KEY</li>
-              <li>R2_BUCKET_NAME</li>
-              <li>R2_PUBLIC_BASE（公開讀取的 URL 前綴）</li>
-            </ul>
-            <p style={{ marginBottom: 0, color: 'rgba(229, 231, 235, 0.8)' }}>
-              若 bucket 設為 public-read，就能直接透過 R2 的公開網址顯示圖片。
-            </p>
-          </div>
-        </div>
+        <UploadForm onUploaded={() => setRefreshToken((value) => value + 1)} />
       </section>
 
       <MediaGrid refreshToken={refreshToken} />
