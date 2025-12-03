@@ -93,6 +93,8 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     await loadMedia(currentPrefix);
   };
 
+  const hasItems = files.length > 0 || folders.length > 0;
+
   const promptRename = async (key: string, isFolder: boolean) => {
     const currentName = key.split('/').pop() ?? key;
     const newName = window.prompt('輸入新名稱', currentName)?.trim();
@@ -115,57 +117,59 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
   return (
     <section className="section">
-      <div className="card" style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+      <div className="card media-toolbar">
+        <div className="toolbar-header">
           <div>
-            <p className="badge" style={{ margin: 0 }}>家庭相簿</p>
+            <p className="badge" style={{ margin: 0 }}>家庭相簿 · R2 即時同步</p>
             <h2 style={{ margin: '0.5rem 0 0' }}>資料夾與媒體管理</h2>
-            <p style={{ margin: '0.25rem 0 0', color: 'rgba(229, 231, 235, 0.8)' }}>
-              目錄結構與 Cloudflare R2 完全同步，重新命名也會更新遠端物件。
+            <p style={{ margin: '0.35rem 0 0', color: 'rgba(229, 231, 235, 0.8)' }}>
+              重新命名、切換資料夾或上傳，所有操作都直接作用在 Cloudflare R2 貯體中。
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button className="btn" onClick={handleBack} disabled={!currentPrefix}>
-              返回上層
+          <div className="toolbar-actions">
+            <button className="btn subtle" onClick={handleBack} disabled={!currentPrefix}>
+              ← 返回上一層
             </button>
             <button className="btn" onClick={() => loadMedia(currentPrefix)} disabled={loading}>
-              {loading ? '載入中...' : '重新整理'}
+              {loading ? '載入中...' : '重新整理列表'}
             </button>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontWeight: 600 }}>目前路徑：</span>
-          <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button className="badge" onClick={() => setCurrentPrefix('')} style={{ cursor: 'pointer' }}>
+        <div className="breadcrumb-row">
+          <span className="label">目前路徑</span>
+          <div className="breadcrumb">
+            <button className="crumb" onClick={() => setCurrentPrefix('')}>
               根目錄
             </button>
             {breadcrumb.map((crumb) => (
-              <button
-                key={crumb.key}
-                className="badge"
-                onClick={() => setCurrentPrefix(crumb.key)}
-                style={{ cursor: 'pointer' }}
-              >
+              <button key={crumb.key} className="crumb" onClick={() => setCurrentPrefix(crumb.key)}>
                 {crumb.label}
               </button>
             ))}
           </div>
+          <div className="badge" style={{ marginLeft: 'auto' }}>
+            📁 {folders.length} 個資料夾 · 🖼️ {files.length} 個媒體檔案
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' }}>
+        <div className="panel-grid">
           <div className="card" style={{ margin: 0 }}>
-            <h3 style={{ marginTop: 0 }}>新增資料夾</h3>
-            <p style={{ marginTop: 0, color: 'rgba(229, 231, 235, 0.8)' }}>
-              會在 R2 中建立對應的虛擬資料夾，方便整理家族相簿。
-            </p>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div className="panel-heading">
+              <div>
+                <p className="label">建立資料夾</p>
+                <h3 style={{ margin: '0.25rem 0 0' }}>整理新的分類</h3>
+              </div>
+              <span className="pill">立即生效</span>
+            </div>
+            <p className="muted">會在 R2 中建立虛擬資料夾，方便按照旅行、年份或活動分類。</p>
+            <div className="inline-form">
               <input
                 className="input"
-                style={{ flex: 1, minWidth: '160px' }}
+                style={{ flex: 1, minWidth: '160px', marginBottom: 0 }}
                 type="text"
                 value={newFolderName}
-                placeholder="輸入資料夾名稱"
+                placeholder="輸入資料夾名稱（例如：taiwan-trip）"
                 onChange={(event) => setNewFolderName(event.target.value)}
               />
               <button className="btn" type="button" onClick={handleCreateFolder}>
@@ -177,69 +181,81 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           <UploadForm currentPath={currentPrefix} onUploaded={() => loadMedia(currentPrefix)} />
         </div>
       </div>
-      {message && <p style={{ color: '#fcd34d', margin: '0 0 0.75rem' }}>{message}</p>}
-      {loading && <p style={{ textAlign: 'center', opacity: 0.8 }}>正在載入媒體...</p>}
-      {!loading && files.length === 0 && folders.length === 0 && (
-        <p style={{ textAlign: 'center', opacity: 0.8 }}>目前還沒有任何媒體，先上傳一張照片或影片吧！</p>
+      {message && <p className="notice warning">{message}</p>}
+      {loading && <p className="notice">正在載入媒體...</p>}
+      {!loading && !hasItems && (
+        <p className="notice" style={{ textAlign: 'center' }}>
+          目前還沒有任何媒體，先上傳一張照片或影片吧！
+        </p>
       )}
-      <div className="grid gallery-grid">
-        {folders.map((folder) => (
-          <article
-            key={folder.key}
-            className="media-card"
-            style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.5rem' }}
-          >
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                letterSpacing: '0.02em'
-              }}
-            >
-              📁 {folder.name}
-            </div>
-            <footer style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="btn" type="button" onClick={() => handleEnterFolder(folder.key)}>
-                  開啟
-                </button>
-                <button className="btn" type="button" onClick={() => promptRename(folder.key, true)}>
-                  重新命名
-                </button>
-              </div>
-              <small style={{ opacity: 0.8 }}>{folder.key || '根目錄'}</small>
-            </footer>
-          </article>
-        ))}
 
-        {files.map((item) => (
-          <article key={item.key} className="media-card">
-            {item.type === 'image' ? (
-              <Image src={item.url} alt={item.key} fill sizes="(max-width: 768px) 100vw, 33vw" priority />
-            ) : (
-              <video src={item.url} controls style={{ width: '100%', height: '100%' }} preload="metadata" />
-            )}
-            <footer>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', alignItems: 'center' }}>
-                <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.key.split('/').pop()}</span>
-                {item.size && <small style={{ opacity: 0.8 }}>{(item.size / 1024 / 1024).toFixed(1)} MB</small>}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', alignItems: 'center' }}>
-                {item.lastModified && (
-                  <small style={{ opacity: 0.75 }}>{new Date(item.lastModified).toLocaleString()}</small>
+      {folders.length > 0 && (
+        <div className="collection">
+          <div className="section-heading">
+            <h3>資料夾</h3>
+            <p className="muted">點擊可直接進入，名稱會同步更新到 R2。</p>
+          </div>
+          <div className="grid gallery-grid">
+            {folders.map((folder) => (
+              <article key={folder.key} className="folder-card">
+                <div className="folder-header">
+                  <span className="pill">Folder</span>
+                  <button className="text-btn" type="button" onClick={() => promptRename(folder.key, true)}>
+                    重新命名
+                  </button>
+                </div>
+                <div className="folder-body">
+                  <div className="folder-icon">📂</div>
+                  <div>
+                    <h4>{folder.name || '未命名'}</h4>
+                    <p className="muted" style={{ margin: '0.2rem 0 0' }}>{folder.key || '根目錄'}</p>
+                  </div>
+                </div>
+                <div className="folder-actions">
+                  <button className="btn subtle" type="button" onClick={() => handleEnterFolder(folder.key)}>
+                    進入資料夾
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {files.length > 0 && (
+        <div className="collection">
+          <div className="section-heading">
+            <h3>媒體檔案</h3>
+            <p className="muted">照片、影片會直接從 R2 讀取，重新命名後即可馬上生效。</p>
+          </div>
+          <div className="grid gallery-grid">
+            {files.map((item) => (
+              <article key={item.key} className="media-card">
+                {item.type === 'image' ? (
+                  <Image src={item.url} alt={item.key} fill sizes="(max-width: 768px) 100vw, 33vw" priority />
+                ) : (
+                  <video src={item.url} controls style={{ width: '100%', height: '100%' }} preload="metadata" />
                 )}
-                <button className="btn" type="button" onClick={() => promptRename(item.key, false)}>
-                  重新命名
-                </button>
-              </div>
-            </footer>
-          </article>
-        ))}
-      </div>
+                <footer>
+                  <div className="media-meta">
+                    <div>
+                      <span className="pill outline">{item.type === 'image' ? 'Image' : 'Video'}</span>
+                      <span className="media-name">{item.key.split('/').pop()}</span>
+                    </div>
+                    {item.size && <small className="muted">{(item.size / 1024 / 1024).toFixed(1)} MB</small>}
+                  </div>
+                  <div className="media-meta" style={{ marginTop: '0.35rem' }}>
+                    {item.lastModified && <small className="muted">{new Date(item.lastModified).toLocaleString()}</small>}
+                    <button className="btn subtle" type="button" onClick={() => promptRename(item.key, false)}>
+                      重新命名
+                    </button>
+                  </div>
+                </footer>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
