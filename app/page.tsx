@@ -1,11 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { MediaGrid } from '@/components/MediaGrid';
-import { UploadForm } from '@/components/UploadForm';
 
 export default function Home() {
-  const [refreshToken, setRefreshToken] = useState(0);
+  const refreshToken = 0;
 
   return (
     <>
@@ -25,10 +23,6 @@ export default function Home() {
             <div className="badge">👪 家人專用的瀏覽介面</div>
           </div>
         </div>
-      </section>
-
-      <section className="section" style={{ paddingTop: 0 }}>
-        <UploadForm onUploaded={() => setRefreshToken((value) => value + 1)} />
       </section>
 
       <MediaGrid refreshToken={refreshToken} />

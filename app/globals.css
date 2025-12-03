@@ -117,25 +117,44 @@ main {
 }
 
 .media-card {
-  position: relative;
-  overflow: hidden;
-  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.5);
-  aspect-ratio: 4 / 3;
+  background: linear-gradient(180deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.95));
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
 }
 
-.media-card img,
-.media-card video {
+.media-thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: radial-gradient(circle at 30% 30%, rgba(34, 197, 94, 0.15), transparent 45%),
+    radial-gradient(circle at 80% 20%, rgba(125, 211, 252, 0.12), transparent 45%),
+    rgba(15, 23, 42, 0.8);
+}
+
+.media-thumb img,
+.media-thumb video {
   object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.media-thumb video {
+  display: block;
 }
 
 .media-card footer {
-  position: absolute;
-  inset: auto 0 0 0;
-  padding: 0.6rem 0.8rem;
-  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
-  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0 0.75rem 0.9rem;
+  font-size: 0.95rem;
 }
 
 .media-toolbar {
@@ -282,30 +301,45 @@ main {
   flex-direction: column;
   gap: 0.75rem;
   padding: 1rem;
-  border-radius: 12px;
-  background: linear-gradient(145deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.92));
+  border-radius: 14px;
+  background: radial-gradient(circle at 20% 20%, rgba(34, 197, 94, 0.14), transparent 35%),
+    radial-gradient(circle at 90% 0%, rgba(96, 165, 250, 0.18), transparent 40%),
+    rgba(17, 24, 39, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
 }
 
-.folder-header {
+.folder-top {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.folder-body {
-  display: flex;
-  gap: 0.75rem;
+  gap: 0.9rem;
   align-items: center;
 }
 
 .folder-icon {
-  font-size: 2.4rem;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(34, 197, 94, 0.08));
+  font-size: 1.8rem;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.folder-text h4 {
+  margin: 0.15rem 0 0.35rem;
+}
+
+.folder-path {
+  margin: 0;
+  font-size: 0.95rem;
 }
 
 .folder-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .btn.subtle {
@@ -335,7 +369,9 @@ main {
   gap: 0.5rem;
 }
 
-.media-name {
-  margin-left: 0.5rem;
+.media-title {
   font-weight: 700;
+  line-height: 1.35;
+  color: #e2e8f0;
+  padding: 0 0.1rem;
 }
