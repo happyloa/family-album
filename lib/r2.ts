@@ -170,23 +170,23 @@ export async function listMedia(prefix = ''): Promise<MediaListing> {
     return { key: relativeKey, name } as FolderItem;
   });
 
-  const files: MediaFile[] = ensureArray(parsed.Contents)
-    .map((item: any) => {
-      const key = readTextNode(item.Key);
-      if (!key || key === searchPrefix) return null;
+  const files: MediaFile[] = ensureArray(parsed.Contents).reduce<MediaFile[]>((acc, item: any) => {
+    const key = readTextNode(item.Key);
+    if (!key || key === searchPrefix) return acc;
 
-      const sizeText = readTextNode(item.Size);
-      const lastModified = readTextNode(item.LastModified) || undefined;
+    const sizeText = readTextNode(item.Size);
+    const lastModified = readTextNode(item.LastModified) || undefined;
 
-      return {
-        key,
-        url: encodeKeyForUrl(key, R2_PUBLIC_BASE),
-        type: inferType(key),
-        size: sizeText ? Number(sizeText) : undefined,
-        lastModified
-      } satisfies MediaFile;
-    })
-    .filter((item): item is MediaFile => item !== null);
+    acc.push({
+      key,
+      url: encodeKeyForUrl(key, R2_PUBLIC_BASE),
+      type: inferType(key),
+      size: sizeText ? Number(sizeText) : undefined,
+      lastModified
+    });
+
+    return acc;
+  }, []);
 
   return {
     prefix: normalizedPrefix,
