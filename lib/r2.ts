@@ -1,8 +1,16 @@
 import { ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
-const requiredEnv = ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET_NAME', 'R2_PUBLIC_BASE'] as const;
+const processEnv = typeof process !== 'undefined' ? process.env : undefined;
 
-type EnvKeys = (typeof requiredEnv)[number];
+const env = {
+  R2_ACCOUNT_ID: processEnv?.R2_ACCOUNT_ID,
+  R2_ACCESS_KEY_ID: processEnv?.R2_ACCESS_KEY_ID,
+  R2_SECRET_ACCESS_KEY: processEnv?.R2_SECRET_ACCESS_KEY,
+  R2_BUCKET_NAME: processEnv?.R2_BUCKET_NAME,
+  R2_PUBLIC_BASE: processEnv?.R2_PUBLIC_BASE
+} as const;
+
+type EnvKeys = keyof typeof env;
 
 type MediaItem = {
   key: string;
@@ -15,8 +23,7 @@ type MediaItem = {
 function getEnv(): Record<EnvKeys, string> {
   const values: Partial<Record<EnvKeys, string>> = {};
 
-  for (const key of requiredEnv) {
-    const value = process.env[key];
+  for (const [key, value] of Object.entries(env) as [EnvKeys, string | undefined][]) {
     if (!value) {
       throw new Error(`Missing environment variable: ${key}`);
     }
@@ -68,7 +75,7 @@ export async function uploadToR2(file: File) {
   const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
   const client = getClient();
   const key = `media/${Date.now()}-${file.name}`;
-  const body = Buffer.from(await file.arrayBuffer());
+  const body = new Uint8Array(await file.arrayBuffer());
 
   await client.send(
     new PutObjectCommand({
