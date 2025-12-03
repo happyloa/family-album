@@ -6,7 +6,8 @@ const customPattern = (() => {
 
   try {
     const parsed = new URL(customBase);
-    const pathname = parsed.pathname.endsWith('/') ? `${parsed.pathname}**` : `${parsed.pathname}/**`;
+    const decodedPath = decodeURI(parsed.pathname);
+    const pathname = decodedPath.endsWith('/') ? `${decodedPath}**` : `${decodedPath}/**`;
 
     return {
       protocol: parsed.protocol.replace(':', ''),
