@@ -78,14 +78,12 @@ function normalizePath(path: string) {
 }
 
 function buildObjectKey(path: string) {
-  const normalized = normalizePath(path);
-  return normalized ? `media/${normalized}` : 'media';
+  return normalizePath(path);
 }
 
 function buildFolderKey(path: string) {
   const normalized = normalizePath(path);
-  const withTrailing = normalized ? `${normalized}/` : '';
-  return `media/${withTrailing}`;
+  return normalized ? `${normalized}/` : '';
 }
 
 function encodeKeyForUrl(key: string, base: string) {
@@ -156,7 +154,7 @@ export async function listMedia(prefix = ''): Promise<MediaListing> {
 
   const folders: FolderItem[] = ensureArray(parsed.CommonPrefixes).map((item: any) => {
     const prefixKey = item.Prefix?.value ?? '';
-    const relativeKey = prefixKey.replace(/^media\//, '').replace(/\/$/, '');
+    const relativeKey = prefixKey.replace(/\/$/, '');
     const name = relativeKey.split('/').pop() ?? relativeKey;
     return { key: relativeKey, name } as FolderItem;
   });
@@ -165,7 +163,7 @@ export async function listMedia(prefix = ''): Promise<MediaListing> {
     .filter((item: any) => item.Key?.value && item.Key.value !== searchPrefix)
     .map((item: any) => {
       const key = item.Key.value as string;
-      const relativeKey = key.replace(/^media\//, '');
+      const relativeKey = key;
       return {
         key: relativeKey,
         url: encodeKeyForUrl(key, R2_PUBLIC_BASE),
@@ -203,7 +201,7 @@ export async function uploadToR2(file: File, targetPrefix = '') {
   }
 
   return {
-    key: key.replace(/^media\//, ''),
+    key,
     url: encodeKeyForUrl(key, R2_PUBLIC_BASE),
     type: inferType(key)
   } satisfies MediaFile;
