@@ -2,16 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 text-slate-100 antialiased;
-    background-image: radial-gradient(circle at 20% 20%, rgba(34, 197, 94, 0.08) 0, transparent 25%),
-      radial-gradient(circle at 80% 0%, rgba(125, 211, 252, 0.1) 0, transparent 22%),
-      radial-gradient(circle at 10% 80%, rgba(244, 114, 182, 0.08) 0, transparent 28%);
-    background-repeat: no-repeat;
-  }
-
-  main {
-    @apply min-h-screen;
-  }
+body {
+  background-image: radial-gradient(circle at 20% 20%, rgba(34, 197, 94, 0.08) 0, transparent 25%),
+    radial-gradient(circle at 80% 0%, rgba(125, 211, 252, 0.1) 0, transparent 22%),
+    radial-gradient(circle at 10% 80%, rgba(244, 114, 182, 0.08) 0, transparent 28%);
+  background-repeat: no-repeat;
 }
