@@ -1,23 +1,12 @@
-import {
-  CopyObjectCommand,
-  DeleteObjectCommand,
-  DeleteObjectsCommand,
-  ListObjectsV2Command,
-  PutObjectCommand,
-  S3Client
-} from '@aws-sdk/client-s3';
+import { AwsClient } from 'aws4fetch';
+import { XMLParser } from 'fast-xml-parser';
 
-const processEnv = typeof process !== 'undefined' ? process.env : undefined;
-
-const env = {
-  R2_ACCOUNT_ID: processEnv?.R2_ACCOUNT_ID,
-  R2_ACCESS_KEY_ID: processEnv?.R2_ACCESS_KEY_ID,
-  R2_SECRET_ACCESS_KEY: processEnv?.R2_SECRET_ACCESS_KEY,
-  R2_BUCKET_NAME: processEnv?.R2_BUCKET_NAME,
-  R2_PUBLIC_BASE: processEnv?.R2_PUBLIC_BASE
-} as const;
-
-type EnvKeys = keyof typeof env;
+type EnvKeys =
+  | 'R2_ACCOUNT_ID'
+  | 'R2_ACCESS_KEY_ID'
+  | 'R2_SECRET_ACCESS_KEY'
+  | 'R2_BUCKET_NAME'
+  | 'R2_PUBLIC_BASE';
 
 type MediaFile = {
   key: string;
@@ -38,6 +27,24 @@ export type MediaListing = {
   files: MediaFile[];
 };
 
+const processEnv = typeof process !== 'undefined' ? process.env : undefined;
+
+const env = {
+  R2_ACCOUNT_ID: processEnv?.R2_ACCOUNT_ID,
+  R2_ACCESS_KEY_ID: processEnv?.R2_ACCESS_KEY_ID,
+  R2_SECRET_ACCESS_KEY: processEnv?.R2_SECRET_ACCESS_KEY,
+  R2_BUCKET_NAME: processEnv?.R2_BUCKET_NAME,
+  R2_PUBLIC_BASE: processEnv?.R2_PUBLIC_BASE
+} as const;
+
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '',
+  textNodeName: 'value'
+});
+
+let cachedClient: AwsClient | null = null;
+
 function getEnv(): Record<EnvKeys, string> {
   const values: Partial<Record<EnvKeys, string>> = {};
 
@@ -52,16 +59,18 @@ function getEnv(): Record<EnvKeys, string> {
 }
 
 function getClient() {
-  const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = getEnv();
+  if (cachedClient) return cachedClient;
 
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: R2_ACCESS_KEY_ID,
-      secretAccessKey: R2_SECRET_ACCESS_KEY
-    }
+  const { R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = getEnv();
+
+  cachedClient = new AwsClient({
+    accessKeyId: R2_ACCESS_KEY_ID,
+    secretAccessKey: R2_SECRET_ACCESS_KEY,
+    service: 's3',
+    region: 'auto'
   });
+
+  return cachedClient;
 }
 
 function normalizePath(path: string) {
@@ -88,46 +97,82 @@ function encodeKeyForUrl(key: string, base: string) {
 }
 
 function encodeCopySource(bucket: string, key: string) {
-  const encodedKey = key
+  return `/${bucket}/${key
     .split('/')
     .map((segment) => encodeURIComponent(segment))
-    .join('/');
-  return `/${bucket}/${encodedKey}`;
+    .join('/')}`;
+}
+
+function escapeXml(text: string) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function ensureArray<T>(value: T | T[] | undefined): T[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+async function signedFetch(input: string, init?: RequestInit) {
+  const client = getClient();
+  return client.fetch(input, init);
+}
+
+function buildEndpointPath(path: string) {
+  const { R2_ACCOUNT_ID } = getEnv();
+  const endpoint = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+  return new URL(path, endpoint).toString();
+}
+
+function inferType(key: string): MediaFile['type'] {
+  const lowered = key.toLowerCase();
+  if (lowered.endsWith('.mp4') || lowered.endsWith('.mov') || lowered.endsWith('.webm')) {
+    return 'video';
+  }
+  return 'image';
 }
 
 export async function listMedia(prefix = ''): Promise<MediaListing> {
   const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
-  const client = getClient();
   const normalizedPrefix = normalizePath(prefix);
   const searchPrefix = buildFolderKey(normalizedPrefix);
 
-  const response = await client.send(
-    new ListObjectsV2Command({
-      Bucket: R2_BUCKET_NAME,
-      Prefix: searchPrefix,
-      Delimiter: '/'
-    })
-  );
+  const url = new URL(buildEndpointPath(`/${R2_BUCKET_NAME}`));
+  url.searchParams.set('list-type', '2');
+  url.searchParams.set('prefix', searchPrefix);
+  url.searchParams.set('delimiter', '/');
 
-  const folders: FolderItem[] = (response.CommonPrefixes || []).map((item) => {
-    const prefixKey = item.Prefix ?? '';
+  const response = await signedFetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Failed to list objects: ${response.status} ${response.statusText}`);
+  }
+
+  const xml = await response.text();
+  const parsed = xmlParser.parse(xml).ListBucketResult;
+
+  const folders: FolderItem[] = ensureArray(parsed.CommonPrefixes).map((item: any) => {
+    const prefixKey = item.Prefix?.value ?? '';
     const relativeKey = prefixKey.replace(/^media\//, '').replace(/\/$/, '');
     const name = relativeKey.split('/').pop() ?? relativeKey;
-    return { key: relativeKey, name };
+    return { key: relativeKey, name } as FolderItem;
   });
 
-  const files: MediaFile[] = (response.Contents || [])
-    .filter((item) => item.Key && item.Key !== searchPrefix)
-    .map((item) => {
-      const key = item.Key ?? 'unknown';
+  const files: MediaFile[] = ensureArray(parsed.Contents)
+    .filter((item: any) => item.Key?.value && item.Key.value !== searchPrefix)
+    .map((item: any) => {
+      const key = item.Key.value as string;
       const relativeKey = key.replace(/^media\//, '');
       return {
         key: relativeKey,
         url: encodeKeyForUrl(key, R2_PUBLIC_BASE),
         type: inferType(key),
-        size: item.Size,
-        lastModified: item.LastModified?.toISOString()
-      };
+        size: item.Size ? Number(item.Size.value) : undefined,
+        lastModified: item.LastModified?.value
+      } satisfies MediaFile;
     });
 
   return {
@@ -139,20 +184,23 @@ export async function listMedia(prefix = ''): Promise<MediaListing> {
 
 export async function uploadToR2(file: File, targetPrefix = '') {
   const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
-  const client = getClient();
   const normalizedPrefix = normalizePath(targetPrefix);
   const key = `${buildFolderKey(normalizedPrefix)}${Date.now()}-${file.name}`;
   const body = new Uint8Array(await file.arrayBuffer());
 
-  await client.send(
-    new PutObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: key,
-      Body: body,
-      ContentType: file.type || undefined,
-      ACL: 'private'
-    })
-  );
+  const url = buildEndpointPath(`/${R2_BUCKET_NAME}/${key}`);
+  const response = await signedFetch(url, {
+    method: 'PUT',
+    body,
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+      'x-amz-acl': 'private'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload file: ${response.status} ${response.statusText}`);
+  }
 
   return {
     key: key.replace(/^media\//, ''),
@@ -163,27 +211,29 @@ export async function uploadToR2(file: File, targetPrefix = '') {
 
 export async function createFolder(prefix: string, name: string) {
   const { R2_BUCKET_NAME } = getEnv();
-  const client = getClient();
   const normalizedPrefix = normalizePath(prefix);
   const normalizedName = normalizePath(name);
   const folderPath = normalizedPrefix ? `${normalizedPrefix}/${normalizedName}` : normalizedName;
   const folderKey = `${buildFolderKey(folderPath)}`;
 
-  await client.send(
-    new PutObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: folderKey,
-      Body: new Uint8Array(),
-      ACL: 'private'
-    })
-  );
+  const url = buildEndpointPath(`/${R2_BUCKET_NAME}/${folderKey}`);
+  const response = await signedFetch(url, {
+    method: 'PUT',
+    body: new Uint8Array(),
+    headers: {
+      'x-amz-acl': 'private'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create folder: ${response.status} ${response.statusText}`);
+  }
 
   return { key: folderPath, name: normalizedName } satisfies FolderItem;
 }
 
 export async function renameFile(key: string, newName: string) {
   const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
-  const client = getClient();
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
   const parent = parts.slice(0, -1).join('/');
@@ -192,21 +242,24 @@ export async function renameFile(key: string, newName: string) {
   const sourceKey = buildObjectKey(normalizedKey);
   const targetKey = buildObjectKey(newKey);
 
-  await client.send(
-    new CopyObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      CopySource: encodeCopySource(R2_BUCKET_NAME, sourceKey),
-      Key: targetKey,
-      ACL: 'private'
-    })
-  );
+  const copyUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${targetKey}`);
+  const copyResponse = await signedFetch(copyUrl, {
+    method: 'PUT',
+    headers: {
+      'x-amz-copy-source': encodeCopySource(R2_BUCKET_NAME, sourceKey),
+      'x-amz-acl': 'private'
+    }
+  });
 
-  await client.send(
-    new DeleteObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: sourceKey
-    })
-  );
+  if (!copyResponse.ok) {
+    throw new Error(`Failed to copy file: ${copyResponse.status} ${copyResponse.statusText}`);
+  }
+
+  const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${sourceKey}`);
+  const deleteResponse = await signedFetch(deleteUrl, { method: 'DELETE' });
+  if (!deleteResponse.ok && deleteResponse.status !== 404) {
+    throw new Error(`Failed to delete old file: ${deleteResponse.status} ${deleteResponse.statusText}`);
+  }
 
   return {
     key: newKey,
@@ -217,7 +270,6 @@ export async function renameFile(key: string, newName: string) {
 
 export async function renameFolder(key: string, newName: string) {
   const { R2_BUCKET_NAME } = getEnv();
-  const client = getClient();
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
   const parent = parts.slice(0, -1).join('/');
@@ -227,51 +279,67 @@ export async function renameFolder(key: string, newName: string) {
   const targetPrefix = buildFolderKey(newFolderPath);
 
   let continuationToken: string | undefined;
-  const toDelete: { Key: string }[] = [];
+  const toDelete: string[] = [];
 
   do {
-    const listResponse = await client.send(
-      new ListObjectsV2Command({
-        Bucket: R2_BUCKET_NAME,
-        Prefix: sourcePrefix,
-        ContinuationToken: continuationToken
-      })
-    );
-
-    for (const item of listResponse.Contents || []) {
-      if (!item.Key) continue;
-      const targetKey = item.Key.replace(sourcePrefix, targetPrefix);
-      await client.send(
-        new CopyObjectCommand({
-          Bucket: R2_BUCKET_NAME,
-          CopySource: encodeCopySource(R2_BUCKET_NAME, item.Key),
-          Key: targetKey,
-          ACL: 'private'
-        })
-      );
-      toDelete.push({ Key: item.Key });
+    const listUrl = new URL(buildEndpointPath(`/${R2_BUCKET_NAME}`));
+    listUrl.searchParams.set('list-type', '2');
+    listUrl.searchParams.set('prefix', sourcePrefix);
+    if (continuationToken) {
+      listUrl.searchParams.set('continuation-token', continuationToken);
     }
 
-    continuationToken = listResponse.IsTruncated ? listResponse.NextContinuationToken : undefined;
+    const listResponse = await signedFetch(listUrl.toString());
+    if (!listResponse.ok) {
+      throw new Error(`Failed to list folder for rename: ${listResponse.status} ${listResponse.statusText}`);
+    }
+
+    const xml = await listResponse.text();
+    const parsed = xmlParser.parse(xml).ListBucketResult;
+
+    for (const item of ensureArray(parsed.Contents)) {
+      if (!item.Key?.value) continue;
+      const sourceKey = item.Key.value as string;
+      const targetKey = sourceKey.replace(sourcePrefix, targetPrefix);
+
+      const copyUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${targetKey}`);
+      const copyResponse = await signedFetch(copyUrl, {
+        method: 'PUT',
+        headers: {
+          'x-amz-copy-source': encodeCopySource(R2_BUCKET_NAME, sourceKey),
+          'x-amz-acl': 'private'
+        }
+      });
+
+      if (!copyResponse.ok) {
+        throw new Error(`Failed to copy object during folder rename: ${copyResponse.status} ${copyResponse.statusText}`);
+      }
+
+      toDelete.push(sourceKey);
+    }
+
+    continuationToken = parsed.IsTruncated?.value === 'true' ? parsed.NextContinuationToken?.value : undefined;
   } while (continuationToken);
 
   while (toDelete.length > 0) {
     const batch = toDelete.splice(0, 1000);
-    await client.send(
-      new DeleteObjectsCommand({
-        Bucket: R2_BUCKET_NAME,
-        Delete: { Objects: batch }
-      })
-    );
+    const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}?delete`);
+    const deleteBody = `<Delete>${batch
+      .map((key) => `<Object><Key>${escapeXml(key)}</Key></Object>`)
+      .join('')}</Delete>`;
+
+    const deleteResponse = await signedFetch(deleteUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/xml'
+      },
+      body: deleteBody
+    });
+
+    if (!deleteResponse.ok) {
+      throw new Error(`Failed to delete old folder objects: ${deleteResponse.status} ${deleteResponse.statusText}`);
+    }
   }
 
   return { key: newFolderPath, name: newFolderPath.split('/').pop() || newFolderPath } satisfies FolderItem;
-}
-
-function inferType(key: string): MediaFile['type'] {
-  const lowered = key.toLowerCase();
-  if (lowered.endsWith('.mp4') || lowered.endsWith('.mov') || lowered.endsWith('.webm')) {
-    return 'video';
-  }
-  return 'image';
 }

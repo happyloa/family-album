@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createFolder, listMedia, renameFile, renameFolder } from '@/lib/r2';
 
+// This route must run on the Edge runtime to be compatible with Cloudflare Pages
+// builds. The R2 client in lib/r2.ts is implemented with fetch so it works here.
 export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
