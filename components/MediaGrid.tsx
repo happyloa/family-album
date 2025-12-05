@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { UploadForm } from './UploadForm';
 
 type MediaFile = {
@@ -23,13 +24,21 @@ type MediaResponse = {
   files: MediaFile[];
 };
 
-export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
+export function MediaGrid({ refreshToken = 0, initialPrefix = '' }: { refreshToken?: number; initialPrefix?: string }) {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPrefix, setCurrentPrefix] = useState('');
+  const [currentPrefix, setCurrentPrefix] = useState(initialPrefix);
   const [newFolderName, setNewFolderName] = useState('');
   const [message, setMessage] = useState('');
+  const [lightboxItem, setLightboxItem] = useState<MediaFile | null>(null);
+
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setCurrentPrefix(initialPrefix);
+  }, [initialPrefix]);
 
   const breadcrumb = useMemo(
     () =>
@@ -63,6 +72,26 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     void loadMedia(currentPrefix);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshToken, currentPrefix]);
+
+  useEffect(() => {
+    const targetPath = currentPrefix ? `/${currentPrefix}` : '/';
+    if (pathname !== targetPath) {
+      router.replace(targetPath, { scroll: false });
+    }
+  }, [currentPrefix, pathname, router]);
+
+  useEffect(() => {
+    if (!lightboxItem) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setLightboxItem(null);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [lightboxItem]);
 
   const handleEnterFolder = (folderKey: string) => {
     setCurrentPrefix(folderKey);
@@ -130,24 +159,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
               重新命名、切換資料夾或上傳都直接作用在 Cloudflare R2，新的設計讓操作更直覺。
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              className="rounded-full border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={handleBack}
-              disabled={!currentPrefix}
-              type="button"
-            >
-              ← 返回上一層
-            </button>
-            <button
-              className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
-              onClick={() => loadMedia(currentPrefix)}
-              disabled={loading}
-              type="button"
-            >
-              {loading ? '載入中…' : '重新整理列表'}
-            </button>
-          </div>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -168,25 +179,27 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
-            <div className="flex items-start justify-between gap-3">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-lg backdrop-blur">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">建立資料夾</p>
                 <h3 className="text-lg font-semibold text-white">整理新的分類</h3>
                 <p className="text-sm text-slate-400">會在 R2 中建立虛擬資料夾，方便依照旅行、年份或活動分類。</p>
               </div>
-              <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">立即生效</span>
+              <span className="self-start rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-400/30">
+                立即生效
+              </span>
             </div>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <input
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                className="w-full rounded-xl border border-slate-700/80 bg-slate-950 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
                 type="text"
                 value={newFolderName}
                 placeholder="輸入資料夾名稱（例如：taiwan-trip）"
                 onChange={(event) => setNewFolderName(event.target.value)}
               />
               <button
-                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
+                className="inline-flex min-w-[140px] items-center justify-center rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
                 type="button"
                 onClick={handleCreateFolder}
               >
@@ -232,8 +245,28 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             </button>
           ))}
         </div>
-        <div className="ml-auto flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-          📁 {folders.length} 個資料夾 · 🖼️ {files.length} 個媒體檔案
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+            📁 {folders.length} 個資料夾 · 🖼️ {files.length} 個媒體檔案
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="rounded-full border border-slate-700 px-3 py-1 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleBack}
+              disabled={!currentPrefix}
+              type="button"
+            >
+              ← 返回上一層
+            </button>
+            <button
+              className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-3 py-1 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
+              onClick={() => loadMedia(currentPrefix)}
+              disabled={loading}
+              type="button"
+            >
+              {loading ? '載入中…' : '重新整理列表'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -296,12 +329,39 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {files.map((item) => (
               <article key={item.key} className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-lg">
-                <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950/80">
+                <div
+                  className="group relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950/80 ring-1 ring-transparent transition hover:-translate-y-0.5 hover:ring-emerald-500/40"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setLightboxItem(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setLightboxItem(item);
+                    }
+                  }}
+                >
+                  <div className="absolute left-0 top-0 z-10 m-2 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
+                    點擊放大預覽
+                  </div>
                   <div className="relative aspect-[4/3] w-full">
                     {item.type === 'image' ? (
-                      <Image src={item.url} alt={item.key} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                      <Image
+                        src={item.url}
+                        alt={item.key}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      />
                     ) : (
-                      <video className="h-full w-full rounded-xl object-cover" src={item.url} controls preload="metadata" />
+                      <video
+                        className="h-full w-full rounded-xl object-cover"
+                        src={item.url}
+                        preload="metadata"
+                        muted
+                        playsInline
+                        loop
+                      />
                     )}
                   </div>
                 </div>
@@ -326,6 +386,55 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                 </div>
               </article>
             ))}
+          </div>
+        </div>
+      )}
+
+      {lightboxItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur">
+          <div className="relative w-[min(1100px,100%)] space-y-3">
+            <button
+              className="absolute right-0 top-0 z-20 rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-white transition hover:bg-white/20"
+              type="button"
+              onClick={() => setLightboxItem(null)}
+            >
+              ✕ 關閉
+            </button>
+            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl">
+              <div className="relative h-[60vh] w-full bg-black">
+                {lightboxItem.type === 'image' ? (
+                  <Image
+                    src={lightboxItem.url}
+                    alt={lightboxItem.key}
+                    fill
+                    sizes="100vw"
+                    className="object-contain"
+                  />
+                ) : (
+                  <video
+                    className="h-full w-full bg-black object-contain"
+                    src={lightboxItem.url}
+                    controls
+                    autoPlay
+                    playsInline
+                  />
+                )}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-200">
+                <div className="space-y-1">
+                  <p className="text-base font-semibold text-white">{lightboxItem.key.split('/').pop()}</p>
+                  <p className="text-xs text-slate-400">{lightboxItem.key}</p>
+                </div>
+                <a
+                  className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-100 ring-1 ring-emerald-400/40 transition hover:bg-emerald-500/25"
+                  href={lightboxItem.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  在新分頁開啟
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       )}

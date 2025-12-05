@@ -1,9 +1,12 @@
 'use client';
 
+import { useMemo } from 'react';
 import { MediaGrid } from '@/components/MediaGrid';
 
-export default function Home() {
+export default function Home({ params }: { params: { prefix?: string[] } }) {
   const refreshToken = 0;
+
+  const initialPrefix = useMemo(() => params.prefix?.join('/') ?? '', [params.prefix]);
 
   return (
     <div className="space-y-8">
@@ -56,7 +59,8 @@ export default function Home() {
         </div>
       </section>
 
-      <MediaGrid refreshToken={refreshToken} />
+      <MediaGrid refreshToken={refreshToken} initialPrefix={initialPrefix} />
     </div>
   );
 }
+
