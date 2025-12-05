@@ -28,6 +28,9 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const searchParams = useSearchParams();
   const isAdmin = searchParams.has('isAdmin');
 
+  const MAX_FOLDER_DEPTH = 2;
+  const MAX_FOLDER_NAME_LENGTH = 30;
+
   const sanitizeName = (value: string) => value.replace(/[<>:"/\\|?*]+/g, '').trim();
   const sanitizePath = (value: string) =>
     value
@@ -35,6 +38,8 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       .map((segment) => sanitizeName(segment))
       .filter(Boolean)
       .join('/');
+
+  const getDepth = (path: string) => (path ? path.split('/').filter(Boolean).length : 0);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [folders, setFolders] = useState<FolderItem[]>([]);
@@ -93,6 +98,12 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   }, [refreshToken, currentPrefix]);
 
   const handleEnterFolder = (folderKey: string) => {
+    if (getDepth(folderKey) > MAX_FOLDER_DEPTH) {
+      setMessage('資料夾層數最多兩層');
+      return;
+    }
+
+    setMessage('');
     setCurrentPrefix(folderKey);
   };
 
@@ -110,6 +121,17 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
     if (!safeName) {
       setMessage('請輸入資料夾名稱');
+      return;
+    }
+
+    if (safeName.length > MAX_FOLDER_NAME_LENGTH) {
+      setMessage('資料夾名稱最多 30 個字');
+      return;
+    }
+
+    const nextDepth = getDepth(currentPrefix) + 1;
+    if (nextDepth > MAX_FOLDER_DEPTH) {
+      setMessage('資料夾層數最多兩層，無法在此建立新資料夾');
       return;
     }
 
@@ -138,6 +160,11 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     const newName = sanitizeName(window.prompt('輸入新名稱', currentName)?.trim() || '');
     if (!newName || newName === currentName) return;
 
+    if (isFolder && newName.length > MAX_FOLDER_NAME_LENGTH) {
+      setMessage('資料夾名稱最多 30 個字');
+      return;
+    }
+
     const response = await fetch('/api/media', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -160,6 +187,16 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     if (rawInput === null) return;
 
     const targetPrefix = sanitizePath(rawInput.trim());
+
+    if (getDepth(targetPrefix) > MAX_FOLDER_DEPTH) {
+      setMessage('資料夾層數最多兩層，請選擇較淺的目標路徑');
+      return;
+    }
+
+    if (isFolder && getDepth(targetPrefix) + 1 > MAX_FOLDER_DEPTH) {
+      setMessage('移動後會超過資料夾層數上限（2 層）');
+      return;
+    }
 
     const response = await fetch('/api/media', {
       method: 'PATCH',
@@ -205,7 +242,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             <p className="text-sm font-semibold text-emerald-300">家庭相簿 · R2 即時同步</p>
             <h2 className="text-2xl font-bold text-white">資料夾與媒體管理</h2>
             <p className="text-sm leading-relaxed text-slate-300">
-              重新命名、切換資料夾或上傳都直接作用在 Cloudflare R2，新的設計讓操作更直覺。
+              使用雙層資料夾結構直接管理 Cloudflare R2 的媒體，支援上傳、重新命名、移動與刪除。
             </p>
           </div>
         </div>
@@ -218,7 +255,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">資料夾</p>
             <p className="mt-2 text-2xl font-extrabold text-emerald-300">{folders.length}</p>
-            <p className="text-xs text-slate-400">點擊卡片即可進入</p>
+            <p className="text-xs text-slate-400">最多兩層結構，點擊卡片即可進入</p>
           </div>
           <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">媒體檔案</p>
@@ -235,6 +272,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">建立資料夾</p>
                   <h3 className="text-lg font-semibold text-white">整理新的分類</h3>
                   <p className="text-sm text-slate-400">會在 R2 中建立虛擬資料夾，方便依照旅行、年份或活動分類。</p>
+                  <p className="text-xs text-slate-500">資料夾層級最多兩層，名稱最多 30 個字。</p>
                 </div>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
@@ -331,8 +369,12 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       {folders.length > 0 && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-xl font-semibold text-white">資料夾</h3>
-            <p className="text-sm text-slate-400">點擊可直接進入</p>
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-semibold text-white">資料夾</h3>
+              <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">
+                點擊可直接進入
+              </span>
+            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {folders.map((folder) => (
