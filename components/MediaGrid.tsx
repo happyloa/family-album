@@ -75,7 +75,9 @@ export function MediaGrid({ refreshToken = 0, initialPrefix = '' }: { refreshTok
     const normalizedPrefix = prefix.trim();
     setCurrentPrefix(normalizedPrefix);
     const targetPath = normalizedPrefix ? `/${normalizedPrefix}` : '/';
+
     router.push(targetPath, { scroll: false });
+    void loadMedia(normalizedPrefix);
   };
 
   useEffect(() => {
