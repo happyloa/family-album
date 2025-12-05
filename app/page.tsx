@@ -1,5 +1,7 @@
 'use client';
 
+import { Suspense } from 'react';
+
 import { MediaGrid } from '@/components/MediaGrid';
 
 export default function Home() {
@@ -56,7 +58,9 @@ export default function Home() {
         </div>
       </section>
 
-      <MediaGrid refreshToken={refreshToken} />
+      <Suspense fallback={<div className="text-sm text-slate-300">Loading media...</div>}>
+        <MediaGrid refreshToken={refreshToken} />
+      </Suspense>
     </div>
   );
 }
