@@ -227,12 +227,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           </div>
         </div>
 
-        {!isAdmin && (
-          <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-200">
-            目前為瀏覽模式，僅提供媒體檢視與下載權限。
-          </div>
-        )}
-
         {isAdmin && (
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
@@ -358,7 +352,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-2xl">📂</div>
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Folder</p>
                     <h4 className="text-lg font-semibold text-white">{folder.name || '未命名'}</h4>
                     <p className="text-xs text-slate-400">{folder.key || '根目錄'}</p>
                   </div>
@@ -407,7 +400,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-xl font-semibold text-white">媒體檔案</h3>
-            <p className="text-sm text-slate-400">照片、影片會直接從 R2 讀取，重新命名後即可馬上生效。</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {paginatedFiles.map((item) => (

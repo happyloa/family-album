@@ -27,8 +27,8 @@ export function UploadForm({
     const context = canvas.getContext('2d');
     if (!context) return file;
 
-    const maxWidth = 1920;
-    const maxHeight = 1080;
+    const maxWidth = 2048;
+    const maxHeight = 2048;
     const ratio = Math.min(1, maxWidth / image.width, maxHeight / image.height);
     const targetWidth = Math.round(image.width * ratio);
     const targetHeight = Math.round(image.height * ratio);
@@ -38,7 +38,7 @@ export function UploadForm({
     context.drawImage(image, 0, 0, targetWidth, targetHeight);
 
     const blob: Blob | null = await new Promise((resolve) =>
-      canvas.toBlob((result) => resolve(result), 'image/webp', 0.82)
+      canvas.toBlob((result) => resolve(result), 'image/webp', 0.86)
     );
 
     if (!blob) return file;
@@ -75,7 +75,7 @@ export function UploadForm({
       const stream = canvas.captureStream();
       const recorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp9',
-        videoBitsPerSecond: 1_500_000
+        videoBitsPerSecond: 1_600_000
       });
 
       const chunks: BlobPart[] = [];
