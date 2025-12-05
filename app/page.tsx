@@ -8,8 +8,8 @@ export default function Home() {
   const refreshToken = 0;
 
   return (
-    <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/50 p-8 shadow-2xl ring-1 ring-white/5 sm:p-10">
+    <section className="space-y-8" aria-label="家庭相簿首頁">
+      <header className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/50 p-8 shadow-2xl ring-1 ring-white/5 sm:p-10">
         <div className="absolute inset-0 bg-mesh opacity-70" aria-hidden />
         <div className="relative grid gap-8 lg:grid-cols-[1.5fr_1fr] lg:items-center">
           <div className="space-y-6">
@@ -23,8 +23,7 @@ export default function Home() {
                 家庭雲端相簿中心
               </h1>
               <p className="max-w-2xl text-lg leading-relaxed text-slate-200">
-                透過全新的操作面板、Tailwind 設計語系與優化後的媒體列表，
-                任何人都能快速上傳、整理或重新命名，直接同步到 Cloudflare R2。
+                這裡集中保存全家的照片與影片，直接同步到 Cloudflare R2，方便備份、整理與分享。
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -56,11 +55,11 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </section>
+      </header>
 
       <Suspense fallback={<div className="text-sm text-slate-300">Loading media...</div>}>
         <MediaGrid refreshToken={refreshToken} />
       </Suspense>
-    </div>
+    </section>
   );
 }

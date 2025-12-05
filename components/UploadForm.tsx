@@ -175,7 +175,7 @@ export function UploadForm({
       <div className="space-y-1">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">上傳家庭回憶</p>
         <h3 className="text-lg font-semibold text-white">照片、影片直接存到 Cloudflare R2</h3>
-        <p className="text-sm text-slate-400">支援圖片與影片，上傳完成後清單會自動刷新。</p>
+        <p className="text-sm text-slate-400">支援圖片與影片，上傳前會自動壓縮以節省流量，完成後清單會自動刷新。</p>
       </div>
       <label className="flex flex-col gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-4 text-sm text-slate-300">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">選擇檔案</span>
