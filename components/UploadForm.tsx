@@ -45,33 +45,45 @@ export function UploadForm({
   };
 
   return (
-    <form className="card" onSubmit={handleSubmit}>
-      <h2 style={{ marginTop: 0 }}>上傳家庭回憶</h2>
-      <p style={{ marginTop: 0, color: 'rgba(229, 231, 235, 0.8)' }}>
-        支援照片與影片，檔案會直接存到 Cloudflare R2。
-      </p>
-      <input
-        className="input"
-        type="file"
-        accept="image/*,video/*"
-        onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-      />
-      <label style={{ display: 'block', marginTop: '0.75rem', color: 'rgba(229, 231, 235, 0.9)', fontWeight: 500 }}>
-        目標資料夾（預設根目錄）
+    <form
+      className="flex h-full flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg"
+      onSubmit={handleSubmit}
+    >
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">上傳家庭回憶</p>
+        <h3 className="text-lg font-semibold text-white">照片、影片直接存到 Cloudflare R2</h3>
+        <p className="text-sm text-slate-400">支援圖片與影片，上傳完成後清單會自動刷新。</p>
+      </div>
+      <label className="flex flex-col gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-4 text-sm text-slate-300">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">選擇檔案</span>
+        <input
+          className="w-full text-sm text-slate-100 file:mr-4 file:rounded-lg file:border-0 file:bg-emerald-500/15 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-emerald-200 hover:file:bg-emerald-500/25"
+          type="file"
+          accept="image/*,video/*"
+          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+        />
+        {file && <span className="text-emerald-200">已選擇：{file.name}</span>}
       </label>
-      <input
-        className="input"
-        type="text"
-        value={path}
-        placeholder="例如：travel/2024"
-        onChange={(event) => setPath(event.target.value)}
-      />
-      <button className="btn" type="submit" disabled={!file || loading}>
-        {loading ? '處理中...' : '上傳檔案'}
-      </button>
-      {status && (
-        <p style={{ margin: '0.75rem 0 0', color: '#a5f3fc', fontWeight: 500 }}>{status}</p>
-      )}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">目標資料夾（預設根目錄）</p>
+        <input
+          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+          type="text"
+          value={path}
+          placeholder="例如：travel/2024"
+          onChange={(event) => setPath(event.target.value)}
+        />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button
+          className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-cyan-300 hover:to-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+          type="submit"
+          disabled={!file || loading}
+        >
+          {loading ? '處理中...' : '上傳檔案'}
+        </button>
+        {status && <p className="text-sm font-semibold text-emerald-200">{status}</p>}
+      </div>
     </form>
   );
 }

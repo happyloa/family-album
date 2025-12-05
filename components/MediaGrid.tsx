@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { UploadForm } from './UploadForm';
 
 type MediaFile = {
@@ -31,12 +31,16 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [newFolderName, setNewFolderName] = useState('');
   const [message, setMessage] = useState('');
 
-  const breadcrumb = currentPrefix
-    ? currentPrefix.split('/').filter(Boolean).map((part, index, arr) => ({
-        label: part,
-        key: arr.slice(0, index + 1).join('/')
-      }))
-    : [];
+  const breadcrumb = useMemo(
+    () =>
+      currentPrefix
+        ? currentPrefix.split('/').filter(Boolean).map((part, index, arr) => ({
+            label: part,
+            key: arr.slice(0, index + 1).join('/')
+          }))
+        : [],
+    [currentPrefix]
+  );
 
   const loadMedia = async (prefix = currentPrefix) => {
     setLoading(true);
@@ -116,46 +120,76 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   };
 
   return (
-    <section className="section">
-      <div className="card media-toolbar">
-        <div className="toolbar-header">
-          <div>
-            <p className="badge" style={{ margin: 0 }}>家庭相簿 · R2 即時同步</p>
-            <h2 style={{ margin: '0.5rem 0 0' }}>資料夾與媒體管理</h2>
-            <p style={{ margin: '0.35rem 0 0', color: 'rgba(229, 231, 235, 0.8)' }}>
-              重新命名、切換資料夾或上傳，所有操作都直接作用在 Cloudflare R2 貯體中。
+    <section className="space-y-4">
+      <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-2xl ring-1 ring-white/5 sm:p-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-emerald-300">家庭相簿 · R2 即時同步</p>
+            <h2 className="text-2xl font-bold text-white">資料夾與媒體管理</h2>
+            <p className="text-sm leading-relaxed text-slate-300">
+              重新命名、切換資料夾或上傳都直接作用在 Cloudflare R2，新的設計讓操作更直覺。
             </p>
           </div>
-          <div className="toolbar-actions">
-            <button className="btn subtle" onClick={handleBack} disabled={!currentPrefix}>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              className="rounded-full border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleBack}
+              disabled={!currentPrefix}
+              type="button"
+            >
               ← 返回上一層
             </button>
-            <button className="btn" onClick={() => loadMedia(currentPrefix)} disabled={loading}>
-              {loading ? '載入中...' : '重新整理列表'}
+            <button
+              className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
+              onClick={() => loadMedia(currentPrefix)}
+              disabled={loading}
+              type="button"
+            >
+              {loading ? '載入中…' : '重新整理列表'}
             </button>
           </div>
         </div>
 
-        <div className="panel-grid">
-          <div className="card" style={{ margin: 0 }}>
-            <div className="panel-heading">
-              <div>
-                <p className="label">建立資料夾</p>
-                <h3 style={{ margin: '0.25rem 0 0' }}>整理新的分類</h3>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">目前路徑</p>
+            <p className="mt-2 text-lg font-bold text-white">{currentPrefix || '根目錄'}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">資料夾</p>
+            <p className="mt-2 text-2xl font-extrabold text-emerald-300">{folders.length}</p>
+            <p className="text-xs text-slate-400">點擊卡片即可進入</p>
+          </div>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">媒體檔案</p>
+            <p className="mt-2 text-2xl font-extrabold text-cyan-300">{files.length}</p>
+            <p className="text-xs text-slate-400">圖片與影片皆可直接預覽</p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">建立資料夾</p>
+                <h3 className="text-lg font-semibold text-white">整理新的分類</h3>
+                <p className="text-sm text-slate-400">會在 R2 中建立虛擬資料夾，方便依照旅行、年份或活動分類。</p>
               </div>
-              <span className="pill">立即生效</span>
+              <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">立即生效</span>
             </div>
-            <p className="muted">會在 R2 中建立虛擬資料夾，方便按照旅行、年份或活動分類。</p>
-            <div className="inline-form">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
               <input
-                className="input"
-                style={{ flex: 1, minWidth: '160px', marginBottom: 0 }}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
                 type="text"
                 value={newFolderName}
                 placeholder="輸入資料夾名稱（例如：taiwan-trip）"
                 onChange={(event) => setNewFolderName(event.target.value)}
               />
-              <button className="btn" type="button" onClick={handleCreateFolder}>
+              <button
+                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
+                type="button"
+                onClick={handleCreateFolder}
+              >
                 建立
               </button>
             </div>
@@ -164,42 +198,56 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           <UploadForm currentPath={currentPrefix} onUploaded={() => loadMedia(currentPrefix)} />
         </div>
       </div>
-      {message && <p className="notice warning">{message}</p>}
-      {loading && <p className="notice">正在載入媒體...</p>}
+
+      {message && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-100">
+          {message}
+        </div>
+      )}
+      {loading && !message && (
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-200">正在載入媒體…</div>
+      )}
       {!loading && !hasItems && (
-        <p className="notice" style={{ textAlign: 'center' }}>
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-4 text-center text-sm text-slate-200">
           目前還沒有任何媒體，先上傳一張照片或影片吧！
-        </p>
+        </div>
       )}
 
-      <div className="breadcrumb-row" style={{ marginTop: '1rem' }}>
-        <span className="label">目前路徑</span>
-        <div className="breadcrumb">
-          <button className="crumb" onClick={() => setCurrentPrefix('')}>
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 shadow-lg">
+        <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">目前路徑</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            className="rounded-full bg-slate-800 px-3 py-1 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+            onClick={() => setCurrentPrefix('')}
+          >
             根目錄
           </button>
           {breadcrumb.map((crumb) => (
-            <button key={crumb.key} className="crumb" onClick={() => setCurrentPrefix(crumb.key)}>
+            <button
+              key={crumb.key}
+              className="rounded-full bg-slate-800 px-3 py-1 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+              onClick={() => setCurrentPrefix(crumb.key)}
+            >
               {crumb.label}
             </button>
           ))}
         </div>
-        <div className="badge" style={{ marginLeft: 'auto' }}>
+        <div className="ml-auto flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
           📁 {folders.length} 個資料夾 · 🖼️ {files.length} 個媒體檔案
         </div>
       </div>
 
       {folders.length > 0 && (
-        <div className="collection">
-          <div className="section-heading">
-            <h3>資料夾</h3>
-            <p className="muted">點擊可直接進入，名稱會同步更新到 R2。</p>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-xl font-semibold text-white">資料夾</h3>
+            <p className="text-sm text-slate-400">點擊可直接進入，名稱會同步更新到 R2。</p>
           </div>
-          <div className="grid gallery-grid">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {folders.map((folder) => (
               <article
                 key={folder.key}
-                className="folder-card"
+                className="group relative flex cursor-pointer flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg transition hover:-translate-y-1 hover:border-emerald-400/50 focus-within:-translate-y-1 focus-within:border-emerald-400/50"
                 role="button"
                 tabIndex={0}
                 onClick={() => handleEnterFolder(folder.key)}
@@ -210,17 +258,20 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                   }
                 }}
               >
-                <div className="folder-top">
-                  <div className="folder-icon">📂</div>
-                  <div className="folder-text">
-                    <p className="label">Folder</p>
-                    <h4>{folder.name || '未命名'}</h4>
-                    <p className="muted folder-path">{folder.key || '根目錄'}</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-2xl">📂</div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Folder</p>
+                    <h4 className="text-lg font-semibold text-white">{folder.name || '未命名'}</h4>
+                    <p className="text-xs text-slate-400">{folder.key || '根目錄'}</p>
                   </div>
                 </div>
-                <div className="folder-actions">
+                <div className="flex items-center justify-between text-sm text-slate-300">
+                  <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                    路徑可立即使用
+                  </span>
                   <button
-                    className="text-btn"
+                    className="text-sm font-semibold text-emerald-200 transition hover:text-emerald-100"
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -237,34 +288,42 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       )}
 
       {files.length > 0 && (
-        <div className="collection">
-          <div className="section-heading">
-            <h3>媒體檔案</h3>
-            <p className="muted">照片、影片會直接從 R2 讀取，重新命名後即可馬上生效。</p>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-xl font-semibold text-white">媒體檔案</h3>
+            <p className="text-sm text-slate-400">照片、影片會直接從 R2 讀取，重新命名後即可馬上生效。</p>
           </div>
-          <div className="grid gallery-grid">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {files.map((item) => (
-              <article key={item.key} className="media-card">
-                <div className="media-thumb">
-                  {item.type === 'image' ? (
-                    <Image src={item.url} alt={item.key} fill sizes="(max-width: 768px) 100vw, 33vw" priority />
-                  ) : (
-                    <video src={item.url} controls preload="metadata" />
-                  )}
-                </div>
-                <footer>
-                  <div className="media-meta">
-                    <span className="pill outline">{item.type === 'image' ? 'Image' : 'Video'}</span>
-                    {item.size && <small className="muted">{(item.size / 1024 / 1024).toFixed(1)} MB</small>}
+              <article key={item.key} className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-lg">
+                <div className="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950/80">
+                  <div className="relative aspect-[4/3] w-full">
+                    {item.type === 'image' ? (
+                      <Image src={item.url} alt={item.key} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                    ) : (
+                      <video className="h-full w-full rounded-xl object-cover" src={item.url} controls preload="metadata" />
+                    )}
                   </div>
-                  <div className="media-title">{item.key.split('/').pop()}</div>
-                  <div className="media-meta">
-                    {item.lastModified && <small className="muted">{new Date(item.lastModified).toLocaleString()}</small>}
-                    <button className="text-btn" type="button" onClick={() => promptRename(item.key, false)}>
+                </div>
+                <div className="space-y-1 px-1 pb-2">
+                  <div className="flex items-center justify-between text-sm text-slate-300">
+                    <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
+                      {item.type === 'image' ? 'Image' : 'Video'}
+                    </span>
+                    {item.size && <span className="text-xs text-slate-400">{(item.size / 1024 / 1024).toFixed(1)} MB</span>}
+                  </div>
+                  <div className="text-base font-semibold text-white">{item.key.split('/').pop()}</div>
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span>{item.lastModified ? new Date(item.lastModified).toLocaleString() : ''}</span>
+                    <button
+                      className="text-sm font-semibold text-emerald-200 transition hover:text-emerald-100"
+                      type="button"
+                      onClick={() => promptRename(item.key, false)}
+                    >
                       重新命名
                     </button>
                   </div>
-                </footer>
+                </div>
               </article>
             ))}
           </div>
