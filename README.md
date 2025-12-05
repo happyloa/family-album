@@ -14,14 +14,30 @@
    npm run dev
    ```
 
-## 部署到 Cloudflare Pages
+## Cloudflare R2 設定與部署到 Pages
 
-- 新增環境變數：`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_BASE`。
-- 確保 bucket 設為 public-read，或改用具權限的簽章 URL 方案。
-- 架設後可直接透過 `/api/upload` 上傳，`/api/media` 取得媒體列表。
+1. **建立 Bucket 與權限**：
+   - 在 R2 建立新的 bucket，記下 bucket 名稱。
+   - 前往 **Settings → Public access** 勾選公開讀取，並將 `R2_PUBLIC_BASE` 設成該公開 URL（格式類似 `https://<bucket>.<account>.r2.cloudflarestorage.com`）。
+   - 若要限制公開權限，則改成預先建立 Cloudflare Signed URL 流程，並更新 API route 以驗證請求。
+2. **建立 API Token**：
+   - 在 Cloudflare 的 **R2 → Manage R2 API tokens** 新增 Access Key，取得 `R2_ACCESS_KEY_ID` 與 `R2_SECRET_ACCESS_KEY`。
+   - `R2_ACCOUNT_ID` 可在 Cloudflare 帳戶首頁找到。
+3. **設定環境變數**：
+   - 將以下變數填入 `.env.local`（開發）或 Pages 環境設定：
+     - `R2_ACCOUNT_ID`
+     - `R2_ACCESS_KEY_ID`
+     - `R2_SECRET_ACCESS_KEY`
+     - `R2_BUCKET_NAME`
+     - `R2_PUBLIC_BASE`
+   - 若透過 Pages Build，確保在「Environment Variables」與「Project settings → Build system → R2 bindings」一致。
+4. **CORS 與檔案型態**：
+   - 如果要在瀏覽器直接存取媒體，請在 R2 bucket CORS 規則加入允許 `GET, HEAD, OPTIONS`，並允許 `Content-Type` 標頭。
+   - 上傳 API 會限制為圖片與影片格式，並在瀏覽器端自動進行壓縮以節省流量。
+5. **部署**：
+   - Pages 部署完成後，可透過 `/api/upload` 上傳到指定路徑，並用 `/api/media` 取得媒體列表。
 
 ## 重要說明
 
 - 專案未內建資料庫，媒體資料直接列舉 R2 bucket。
-- `R2_PUBLIC_BASE` 應該是公開讀取的 URL 前綴，例如 `https://<bucket>.<account>.r2.cloudflarestorage.com`。
 - 若要限制權限，可在 API route 中加入驗證機制或簽發一次性下載 URL。

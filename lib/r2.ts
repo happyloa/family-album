@@ -212,6 +212,7 @@ export async function uploadToR2(file: File, targetPrefix = '') {
     method: 'PUT',
     body,
     headers: {
+      // 儲存時帶上檔案類型，讓 R2 與 CDN 能正確推斷 Content-Type
       'Content-Type': file.type || 'application/octet-stream',
       'x-amz-acl': 'private'
     }
