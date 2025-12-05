@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { UploadForm } from './UploadForm';
 
@@ -24,6 +25,17 @@ type MediaResponse = {
 };
 
 export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
+  const searchParams = useSearchParams();
+  const isAdmin = searchParams.has('isAdmin');
+
+  const sanitizeName = (value: string) => value.replace(/[<>:"/\\|?*]+/g, '').trim();
+  const sanitizePath = (value: string) =>
+    value
+      .split('/')
+      .map((segment) => sanitizeName(segment))
+      .filter(Boolean)
+      .join('/');
+
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +89,11 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   };
 
   const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) {
+    if (!isAdmin) return;
+
+    const safeName = sanitizeName(newFolderName);
+
+    if (!safeName) {
       setMessage('請輸入資料夾名稱');
       return;
     }
@@ -85,7 +101,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     const response = await fetch('/api/media', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create-folder', name: newFolderName, prefix: currentPrefix })
+      body: JSON.stringify({ action: 'create-folder', name: safeName, prefix: currentPrefix })
     });
 
     if (!response.ok) {
@@ -101,8 +117,10 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const hasItems = files.length > 0 || folders.length > 0;
 
   const promptRename = async (key: string, isFolder: boolean) => {
+    if (!isAdmin) return;
+
     const currentName = key.split('/').pop() ?? key;
-    const newName = window.prompt('輸入新名稱', currentName)?.trim();
+    const newName = sanitizeName(window.prompt('輸入新名稱', currentName)?.trim() || '');
     if (!newName || newName === currentName) return;
 
     const response = await fetch('/api/media', {
@@ -113,6 +131,50 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
     if (!response.ok) {
       setMessage('重新命名失敗，請稍後再試');
+      return;
+    }
+
+    setMessage('');
+    await loadMedia(currentPrefix);
+  };
+
+  const handleMove = async (key: string, isFolder: boolean) => {
+    if (!isAdmin) return;
+
+    const rawInput = window.prompt('輸入目標路徑（例如：albums/2024）', currentPrefix);
+    if (rawInput === null) return;
+
+    const targetPrefix = sanitizePath(rawInput.trim());
+
+    const response = await fetch('/api/media', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'move', key, targetPrefix, isFolder })
+    });
+
+    if (!response.ok) {
+      setMessage('移動失敗，請稍後再試');
+      return;
+    }
+
+    setMessage('');
+    await loadMedia(targetPrefix || currentPrefix);
+  };
+
+  const handleDelete = async (key: string, isFolder: boolean) => {
+    if (!isAdmin) return;
+
+    const confirmed = window.confirm(`確定要刪除${isFolder ? '資料夾與其內容' : '檔案'}嗎？`);
+    if (!confirmed) return;
+
+    const response = await fetch('/api/media', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', key, isFolder })
+    });
+
+    if (!response.ok) {
+      setMessage('刪除失敗，請稍後再試');
       return;
     }
 
@@ -150,36 +212,43 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">建立資料夾</p>
-                <h3 className="text-lg font-semibold text-white">整理新的分類</h3>
-                <p className="text-sm text-slate-400">會在 R2 中建立虛擬資料夾，方便依照旅行、年份或活動分類。</p>
-              </div>
-              <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">立即生效</span>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-              <input
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
-                type="text"
-                value={newFolderName}
-                placeholder="輸入資料夾名稱（例如：taiwan-trip）"
-                onChange={(event) => setNewFolderName(event.target.value)}
-              />
-              <button
-                className="inline-flex h-full min-h-[52px] items-center justify-center rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
-                type="button"
-                onClick={handleCreateFolder}
-              >
-                建立
-              </button>
-            </div>
+        {!isAdmin && (
+          <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-200">
+            目前為瀏覽模式，帶上 <span className="font-semibold text-emerald-200">?isAdmin</span> 參數即可啟用建立、上傳、移動或刪除功能。
           </div>
+        )}
 
-          <UploadForm currentPath={currentPrefix} onUploaded={() => loadMedia(currentPrefix)} />
-        </div>
+        {isAdmin && (
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">建立資料夾</p>
+                  <h3 className="text-lg font-semibold text-white">整理新的分類</h3>
+                  <p className="text-sm text-slate-400">會在 R2 中建立虛擬資料夾，方便依照旅行、年份或活動分類。</p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                <input
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                  type="text"
+                  value={newFolderName}
+                  placeholder="輸入資料夾名稱（例如：taiwan-trip）"
+                  onChange={(event) => setNewFolderName(sanitizeName(event.target.value))}
+                />
+                <button
+                  className="inline-flex h-full min-h-[52px] items-center justify-center rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
+                  type="button"
+                  onClick={handleCreateFolder}
+                >
+                  建立
+                </button>
+              </div>
+            </div>
+
+            <UploadForm currentPath={currentPrefix} onUploaded={() => loadMedia(currentPrefix)} />
+          </div>
+        )}
       </div>
 
       {message && (
@@ -269,21 +338,40 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                     <p className="text-xs text-slate-400">{folder.key || '根目錄'}</p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-sm text-slate-300">
-                  <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-                    路徑可立即使用
-                  </span>
-                  <button
-                    className="text-sm font-semibold text-emerald-200 transition hover:text-emerald-100"
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      promptRename(folder.key, true);
-                    }}
-                  >
-                    重新命名
-                  </button>
-                </div>
+                {isAdmin && (
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
+                    <button
+                      className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        promptRename(folder.key, true);
+                      }}
+                    >
+                      重新命名
+                    </button>
+                    <button
+                      className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleMove(folder.key, true);
+                      }}
+                    >
+                      移動
+                    </button>
+                    <button
+                      className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDelete(folder.key, true);
+                      }}
+                    >
+                      刪除
+                    </button>
+                  </div>
+                )}
               </article>
             ))}
           </div>
@@ -329,13 +417,31 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                   <div className="text-base font-semibold text-white">{item.key.split('/').pop()}</div>
                   <div className="flex items-center justify-between text-xs text-slate-400">
                     <span>{item.lastModified ? new Date(item.lastModified).toLocaleString() : ''}</span>
-                    <button
-                      className="text-sm font-semibold text-emerald-200 transition hover:text-emerald-100"
-                      type="button"
-                      onClick={() => promptRename(item.key, false)}
-                    >
-                      重新命名
-                    </button>
+                    {isAdmin && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <button
+                          className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-emerald-200 transition hover:bg-slate-700 hover:text-emerald-100"
+                          type="button"
+                          onClick={() => promptRename(item.key, false)}
+                        >
+                          重新命名
+                        </button>
+                        <button
+                          className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
+                          type="button"
+                          onClick={() => handleMove(item.key, false)}
+                        >
+                          移動
+                        </button>
+                        <button
+                          className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40"
+                          type="button"
+                          onClick={() => handleDelete(item.key, false)}
+                        >
+                          刪除
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </article>

@@ -77,6 +77,18 @@ function normalizePath(path: string) {
   return path.replace(/^\/+|\/+$/g, '').trim();
 }
 
+function sanitizeSegment(name: string) {
+  return normalizePath(name).replace(/[<>:"/\\|?*]+/g, '');
+}
+
+function sanitizePath(path: string) {
+  return path
+    .split('/')
+    .map((segment) => sanitizeSegment(segment))
+    .filter(Boolean)
+    .join('/');
+}
+
 function buildObjectKey(path: string) {
   return normalizePath(path);
 }
@@ -153,7 +165,7 @@ function inferType(key: string): MediaFile['type'] {
 
 export async function listMedia(prefix = ''): Promise<MediaListing> {
   const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
-  const normalizedPrefix = normalizePath(prefix);
+  const normalizedPrefix = sanitizePath(prefix);
   const searchPrefix = buildFolderKey(normalizedPrefix);
 
   const url = new URL(buildEndpointPath(`/${R2_BUCKET_NAME}`));
@@ -203,7 +215,7 @@ export async function listMedia(prefix = ''): Promise<MediaListing> {
 
 export async function uploadToR2(file: File, targetPrefix = '') {
   const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
-  const normalizedPrefix = normalizePath(targetPrefix);
+  const normalizedPrefix = sanitizePath(targetPrefix);
   const key = `${buildFolderKey(normalizedPrefix)}${Date.now()}-${file.name}`;
   const body = new Uint8Array(await file.arrayBuffer());
 
@@ -231,8 +243,8 @@ export async function uploadToR2(file: File, targetPrefix = '') {
 
 export async function createFolder(prefix: string, name: string) {
   const { R2_BUCKET_NAME } = getEnv();
-  const normalizedPrefix = normalizePath(prefix);
-  const normalizedName = normalizePath(name);
+  const normalizedPrefix = sanitizePath(prefix);
+  const normalizedName = sanitizeSegment(name);
   const folderPath = normalizedPrefix ? `${normalizedPrefix}/${normalizedName}` : normalizedName;
   const folderKey = `${buildFolderKey(folderPath)}`;
 
@@ -257,7 +269,7 @@ export async function renameFile(key: string, newName: string) {
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
   const parent = parts.slice(0, -1).join('/');
-  const newKey = parent ? `${parent}/${normalizePath(newName)}` : normalizePath(newName);
+  const newKey = parent ? `${sanitizePath(parent)}/${sanitizeSegment(newName)}` : sanitizeSegment(newName);
 
   const sourceKey = buildObjectKey(normalizedKey);
   const targetKey = buildObjectKey(newKey);
@@ -293,7 +305,7 @@ export async function renameFolder(key: string, newName: string) {
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
   const parent = parts.slice(0, -1).join('/');
-  const newFolderPath = parent ? `${parent}/${normalizePath(newName)}` : normalizePath(newName);
+  const newFolderPath = parent ? `${sanitizePath(parent)}/${sanitizeSegment(newName)}` : sanitizeSegment(newName);
 
   const sourcePrefix = buildFolderKey(normalizedKey);
   const targetPrefix = buildFolderKey(newFolderPath);
@@ -363,4 +375,180 @@ export async function renameFolder(key: string, newName: string) {
   }
 
   return { key: newFolderPath, name: newFolderPath.split('/').pop() || newFolderPath } satisfies FolderItem;
+}
+
+export async function deleteFile(key: string) {
+  const { R2_BUCKET_NAME } = getEnv();
+  const normalizedKey = normalizePath(key);
+  const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${normalizedKey}`);
+  const deleteResponse = await signedFetch(deleteUrl, { method: 'DELETE' });
+
+  if (!deleteResponse.ok && deleteResponse.status !== 404) {
+    throw new Error(`Failed to delete file: ${deleteResponse.status} ${deleteResponse.statusText}`);
+  }
+}
+
+export async function deleteFolder(prefix: string) {
+  const { R2_BUCKET_NAME } = getEnv();
+  const normalizedPrefix = sanitizePath(prefix);
+  const targetPrefix = buildFolderKey(normalizedPrefix);
+
+  let continuationToken: string | undefined;
+  const toDelete: string[] = [];
+
+  do {
+    const listUrl = new URL(buildEndpointPath(`/${R2_BUCKET_NAME}`));
+    listUrl.searchParams.set('list-type', '2');
+    listUrl.searchParams.set('prefix', targetPrefix);
+    if (continuationToken) {
+      listUrl.searchParams.set('continuation-token', continuationToken);
+    }
+
+    const listResponse = await signedFetch(listUrl.toString());
+    if (!listResponse.ok) {
+      throw new Error(`Failed to list folder for delete: ${listResponse.status} ${listResponse.statusText}`);
+    }
+
+    const xml = await listResponse.text();
+    const parsed = xmlParser.parse(xml).ListBucketResult;
+
+    for (const item of ensureArray(parsed.Contents)) {
+      const targetKey = readTextNode(item.Key);
+      if (!targetKey) continue;
+      toDelete.push(targetKey);
+    }
+
+    const isTruncated = readTextNode(parsed.IsTruncated) === 'true';
+    continuationToken = isTruncated ? readTextNode(parsed.NextContinuationToken) || undefined : undefined;
+  } while (continuationToken);
+
+  while (toDelete.length > 0) {
+    const batch = toDelete.splice(0, 1000);
+    const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}?delete`);
+    const deleteBody = `<Delete>${batch
+      .map((key) => `<Object><Key>${escapeXml(key)}</Key></Object>`)
+      .join('')}</Delete>`;
+
+    const deleteResponse = await signedFetch(deleteUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/xml'
+      },
+      body: deleteBody
+    });
+
+    if (!deleteResponse.ok) {
+      throw new Error(`Failed to delete folder objects: ${deleteResponse.status} ${deleteResponse.statusText}`);
+    }
+  }
+}
+
+export async function moveFile(key: string, targetPrefix: string) {
+  const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
+  const normalizedKey = normalizePath(key);
+  const filename = normalizedKey.split('/').pop();
+  if (!filename) throw new Error('Invalid file name');
+
+  const safeTargetPrefix = sanitizePath(targetPrefix);
+  const newKey = safeTargetPrefix ? `${safeTargetPrefix}/${filename}` : filename;
+
+  const copyUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${newKey}`);
+  const copyResponse = await signedFetch(copyUrl, {
+    method: 'PUT',
+    headers: {
+      'x-amz-copy-source': encodeCopySource(R2_BUCKET_NAME, normalizedKey),
+      'x-amz-acl': 'private'
+    }
+  });
+
+  if (!copyResponse.ok) {
+    throw new Error(`Failed to move file: ${copyResponse.status} ${copyResponse.statusText}`);
+  }
+
+  const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${normalizedKey}`);
+  const deleteResponse = await signedFetch(deleteUrl, { method: 'DELETE' });
+  if (!deleteResponse.ok && deleteResponse.status !== 404) {
+    throw new Error(`Failed to delete old file after move: ${deleteResponse.status} ${deleteResponse.statusText}`);
+  }
+
+  return { key: newKey, url: encodeKeyForUrl(newKey, R2_PUBLIC_BASE), type: inferType(newKey) } satisfies MediaFile;
+}
+
+export async function moveFolder(key: string, targetPrefix: string) {
+  const { R2_BUCKET_NAME } = getEnv();
+  const normalizedKey = normalizePath(key);
+  const folderName = normalizedKey.split('/').pop();
+  if (!folderName) throw new Error('Invalid folder');
+
+  const safeTargetPrefix = sanitizePath(targetPrefix);
+  const targetFolderPath = safeTargetPrefix ? `${safeTargetPrefix}/${folderName}` : folderName;
+
+  const sourcePrefix = buildFolderKey(normalizedKey);
+  const targetPrefixKey = buildFolderKey(targetFolderPath);
+
+  let continuationToken: string | undefined;
+  const toDelete: string[] = [];
+
+  do {
+    const listUrl = new URL(buildEndpointPath(`/${R2_BUCKET_NAME}`));
+    listUrl.searchParams.set('list-type', '2');
+    listUrl.searchParams.set('prefix', sourcePrefix);
+    if (continuationToken) {
+      listUrl.searchParams.set('continuation-token', continuationToken);
+    }
+
+    const listResponse = await signedFetch(listUrl.toString());
+    if (!listResponse.ok) {
+      throw new Error(`Failed to list folder for move: ${listResponse.status} ${listResponse.statusText}`);
+    }
+
+    const xml = await listResponse.text();
+    const parsed = xmlParser.parse(xml).ListBucketResult;
+
+    for (const item of ensureArray(parsed.Contents)) {
+      const sourceKey = readTextNode(item.Key);
+      if (!sourceKey) continue;
+      const targetKey = sourceKey.replace(sourcePrefix, targetPrefixKey);
+
+      const copyUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${targetKey}`);
+      const copyResponse = await signedFetch(copyUrl, {
+        method: 'PUT',
+        headers: {
+          'x-amz-copy-source': encodeCopySource(R2_BUCKET_NAME, sourceKey),
+          'x-amz-acl': 'private'
+        }
+      });
+
+      if (!copyResponse.ok) {
+        throw new Error(`Failed to copy object during folder move: ${copyResponse.status} ${copyResponse.statusText}`);
+      }
+
+      toDelete.push(sourceKey);
+    }
+
+    const isTruncated = readTextNode(parsed.IsTruncated) === 'true';
+    continuationToken = isTruncated ? readTextNode(parsed.NextContinuationToken) || undefined : undefined;
+  } while (continuationToken);
+
+  while (toDelete.length > 0) {
+    const batch = toDelete.splice(0, 1000);
+    const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}?delete`);
+    const deleteBody = `<Delete>${batch
+      .map((itemKey) => `<Object><Key>${escapeXml(itemKey)}</Key></Object>`)
+      .join('')}</Delete>`;
+
+    const deleteResponse = await signedFetch(deleteUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/xml'
+      },
+      body: deleteBody
+    });
+
+    if (!deleteResponse.ok) {
+      throw new Error(`Failed to delete old folder after move: ${deleteResponse.status} ${deleteResponse.statusText}`);
+    }
+  }
+
+  return { key: targetFolderPath, name: targetFolderPath.split('/').pop() || targetFolderPath } satisfies FolderItem;
 }

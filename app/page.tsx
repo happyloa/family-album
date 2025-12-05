@@ -1,5 +1,7 @@
 'use client';
 
+import { Suspense } from 'react';
+
 import { MediaGrid } from '@/components/MediaGrid';
 
 export default function Home() {
@@ -18,7 +20,7 @@ export default function Home() {
             </div>
             <div className="space-y-3">
               <h1 className="text-3xl font-semibold leading-tight text-white sm:text-4xl">
-                把全家的照片、影片放在最安全的私人角落
+                家庭雲端相簿中心
               </h1>
               <p className="max-w-2xl text-lg leading-relaxed text-slate-200">
                 透過全新的操作面板、Tailwind 設計語系與優化後的媒體列表，
@@ -56,7 +58,9 @@ export default function Home() {
         </div>
       </section>
 
-      <MediaGrid refreshToken={refreshToken} />
+      <Suspense fallback={<div className="text-sm text-slate-300">Loading media...</div>}>
+        <MediaGrid refreshToken={refreshToken} />
+      </Suspense>
     </div>
   );
 }
