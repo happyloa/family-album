@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { UploadForm } from './UploadForm';
 
 type MediaFile = {
@@ -34,7 +34,6 @@ export function MediaGrid({ refreshToken = 0, initialPrefix = '' }: { refreshTok
   const [lightboxItem, setLightboxItem] = useState<MediaFile | null>(null);
 
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     setCurrentPrefix(initialPrefix);
@@ -63,7 +62,6 @@ export function MediaGrid({ refreshToken = 0, initialPrefix = '' }: { refreshTok
     const data: MediaResponse = await response.json();
     setFiles(data.files);
     setFolders(data.folders);
-    setCurrentPrefix(data.prefix);
     setMessage('');
     setLoading(false);
   };
@@ -73,12 +71,12 @@ export function MediaGrid({ refreshToken = 0, initialPrefix = '' }: { refreshTok
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshToken, currentPrefix]);
 
-  useEffect(() => {
-    const targetPath = currentPrefix ? `/${currentPrefix}` : '/';
-    if (pathname !== targetPath) {
-      router.replace(targetPath, { scroll: false });
-    }
-  }, [currentPrefix, pathname, router]);
+  const navigateToPrefix = (prefix: string) => {
+    const normalizedPrefix = prefix.trim();
+    setCurrentPrefix(normalizedPrefix);
+    const targetPath = normalizedPrefix ? `/${normalizedPrefix}` : '/';
+    router.push(targetPath, { scroll: false });
+  };
 
   useEffect(() => {
     if (!lightboxItem) return;
@@ -94,14 +92,14 @@ export function MediaGrid({ refreshToken = 0, initialPrefix = '' }: { refreshTok
   }, [lightboxItem]);
 
   const handleEnterFolder = (folderKey: string) => {
-    setCurrentPrefix(folderKey);
+    navigateToPrefix(folderKey);
   };
 
   const handleBack = () => {
     if (!currentPrefix) return;
     const parts = currentPrefix.split('/').filter(Boolean);
     parts.pop();
-    setCurrentPrefix(parts.join('/'));
+    navigateToPrefix(parts.join('/'));
   };
 
   const handleCreateFolder = async () => {
@@ -231,7 +229,7 @@ export function MediaGrid({ refreshToken = 0, initialPrefix = '' }: { refreshTok
         <div className="flex flex-wrap items-center gap-2">
           <button
             className="rounded-full bg-slate-800 px-3 py-1 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
-            onClick={() => setCurrentPrefix('')}
+            onClick={() => navigateToPrefix('')}
           >
             根目錄
           </button>
@@ -239,7 +237,7 @@ export function MediaGrid({ refreshToken = 0, initialPrefix = '' }: { refreshTok
             <button
               key={crumb.key}
               className="rounded-full bg-slate-800 px-3 py-1 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
-              onClick={() => setCurrentPrefix(crumb.key)}
+              onClick={() => navigateToPrefix(crumb.key)}
             >
               {crumb.label}
             </button>
