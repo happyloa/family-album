@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createFolder, listMedia, renameFile, renameFolder } from '@/lib/r2';
+import {
+  createFolder,
+  deleteFile,
+  deleteFolder,
+  listMedia,
+  moveFile,
+  moveFolder,
+  renameFile,
+  renameFolder
+} from '@/lib/r2';
 
 // This route must run on the Edge runtime to be compatible with Cloudflare Pages
 // builds. The R2 client in lib/r2.ts is implemented with fetch so it works here.
@@ -40,23 +49,66 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
 
-    if (body?.action !== 'rename') {
+    if (body?.action !== 'rename' && body?.action !== 'move') {
       return NextResponse.json({ error: '未知的請求' }, { status: 400 });
     }
 
-    if (!body.key || !body.newName) {
+    if (!body.key) {
       return NextResponse.json({ error: '缺少必要參數' }, { status: 400 });
     }
 
+    if (body.action === 'rename') {
+      if (!body.newName) {
+        return NextResponse.json({ error: '缺少必要參數' }, { status: 400 });
+      }
+
+      if (body.isFolder) {
+        const folder = await renameFolder(body.key, body.newName);
+        return NextResponse.json({ folder });
+      }
+
+      const media = await renameFile(body.key, body.newName);
+      return NextResponse.json({ media });
+    }
+
+    if (!('targetPrefix' in body)) {
+      return NextResponse.json({ error: '缺少目標路徑' }, { status: 400 });
+    }
+
     if (body.isFolder) {
-      const folder = await renameFolder(body.key, body.newName);
+      const folder = await moveFolder(body.key, body.targetPrefix || '');
       return NextResponse.json({ folder });
     }
 
-    const media = await renameFile(body.key, body.newName);
+    const media = await moveFile(body.key, body.targetPrefix || '');
     return NextResponse.json({ media });
   } catch (error) {
     console.error('Failed to rename item', error);
     return NextResponse.json({ error: '重新命名失敗' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    if (body?.action !== 'delete') {
+      return NextResponse.json({ error: '未知的請求' }, { status: 400 });
+    }
+
+    if (!body.key) {
+      return NextResponse.json({ error: '缺少必要參數' }, { status: 400 });
+    }
+
+    if (body.isFolder) {
+      await deleteFolder(body.key);
+      return NextResponse.json({});
+    }
+
+    await deleteFile(body.key);
+    return NextResponse.json({});
+  } catch (error) {
+    console.error('Failed to delete item', error);
+    return NextResponse.json({ error: '刪除失敗' }, { status: 500 });
   }
 }
