@@ -43,6 +43,8 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [newFolderName, setNewFolderName] = useState('');
   const [message, setMessage] = useState('');
   const [selectedMedia, setSelectedMedia] = useState<MediaFile | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
 
   const breadcrumb = useMemo(
     () =>
@@ -54,6 +56,18 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         : [],
     [currentPrefix]
   );
+
+  const totalPages = Math.max(1, Math.ceil(files.length / itemsPerPage));
+  const paginatedFiles = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return files.slice(start, start + itemsPerPage);
+  }, [currentPage, files, itemsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const loadMedia = async (prefix = currentPrefix) => {
     setLoading(true);
@@ -68,6 +82,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     setFiles(data.files);
     setFolders(data.folders);
     setCurrentPrefix(data.prefix);
+    setCurrentPage(1);
     setMessage('');
     setLoading(false);
   };
@@ -214,7 +229,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
         {!isAdmin && (
           <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-200">
-            目前為瀏覽模式，帶上 <span className="font-semibold text-emerald-200">?isAdmin</span> 參數即可啟用建立、上傳、移動或刪除功能。
+            目前為瀏覽模式，僅提供媒體檢視與下載權限。
           </div>
         )}
 
@@ -265,55 +280,65 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 shadow-lg">
-        <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">目前路徑</span>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            className="rounded-full bg-slate-800 px-3 py-1 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
-            onClick={() => setCurrentPrefix('')}
-          >
-            根目錄
-          </button>
-            {breadcrumb.map((crumb) => (
+      <nav
+        aria-label="路徑導覽"
+        className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 shadow-lg md:flex-row md:items-center"
+      >
+        <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+          <span className="rounded-full bg-slate-800 px-3 py-1">目前路徑</span>
+          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-200">📁 {folders.length} · 🖼️ {files.length}</span>
+        </div>
+        <ol className="flex flex-wrap items-center gap-2" aria-label="Breadcrumb">
+          <li>
+            <button
+              className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100"
+              onClick={() => setCurrentPrefix('')}
+              type="button"
+            >
+              根目錄
+            </button>
+          </li>
+          {breadcrumb.map((crumb, index) => (
+            <li key={crumb.key} className="flex items-center gap-2">
+              <span aria-hidden className="text-slate-500">›</span>
               <button
-                key={crumb.key}
-                className="rounded-full bg-slate-800 px-3 py-1 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+                className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100"
                 onClick={() => setCurrentPrefix(crumb.key)}
-            >
-              {crumb.label}
-            </button>
-            ))}
+                type="button"
+              >
+                <span className="rounded bg-slate-800 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-300">
+                  {index + 1}
+                </span>
+                {crumb.label}
+              </button>
+            </li>
+          ))}
+        </ol>
+        <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+          <button
+            className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={handleBack}
+            disabled={!currentPrefix}
+            type="button"
+          >
+            ← 返回上一層
+          </button>
+          <button
+            className="rounded-lg bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
+            onClick={() => loadMedia(currentPrefix)}
+            disabled={loading}
+            type="button"
+          >
+            {loading ? '載入中…' : '重新整理列表'}
+          </button>
         </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-            📁 {folders.length} 個資料夾 · 🖼️ {files.length} 個媒體檔案
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              className="rounded-full border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={handleBack}
-              disabled={!currentPrefix}
-              type="button"
-            >
-              ← 返回上一層
-            </button>
-            <button
-              className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
-              onClick={() => loadMedia(currentPrefix)}
-              disabled={loading}
-              type="button"
-            >
-              {loading ? '載入中…' : '重新整理列表'}
-            </button>
-          </div>
-        </div>
-      </div>
+      </nav>
 
       {folders.length > 0 && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-xl font-semibold text-white">資料夾</h3>
-            <p className="text-sm text-slate-400">點擊可直接進入，名稱會同步更新到 R2。</p>
+            <p className="text-sm text-slate-400">點擊可直接進入</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {folders.map((folder) => (
@@ -385,7 +410,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             <p className="text-sm text-slate-400">照片、影片會直接從 R2 讀取，重新命名後即可馬上生效。</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {files.map((item) => (
+            {paginatedFiles.map((item) => (
               <article key={item.key} className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-lg">
                 <div
                   className="group relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950/80"
@@ -401,9 +426,24 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                 >
                   <div className="relative aspect-[4/3] w-full cursor-zoom-in transition duration-200 group-hover:brightness-110">
                     {item.type === 'image' ? (
-                      <Image src={item.url} alt={item.key} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                      <Image
+                        src={item.url}
+                        alt={item.key}
+                        fill
+                        loading="lazy"
+                        decoding="async"
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        className="object-cover"
+                      />
                     ) : (
-                      <video className="h-full w-full rounded-xl object-cover" src={item.url} preload="metadata" muted playsInline />
+                      <video
+                        className="h-full w-full rounded-xl object-cover"
+                        src={item.url}
+                        preload="metadata"
+                        playsInline
+                        muted
+                        controlsList="nodownload"
+                      />
                     )}
                   </div>
                 </div>
@@ -447,6 +487,29 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
               </article>
             ))}
           </div>
+          {files.length > itemsPerPage && (
+            <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-100">
+              <button
+                className="rounded-lg border border-slate-700 px-3 py-1.5 font-semibold transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={currentPage === 1}
+              >
+                ← 上一頁
+              </button>
+              <span className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+                第 {currentPage} / {totalPages} 頁
+              </span>
+              <button
+                className="rounded-lg border border-slate-700 px-3 py-1.5 font-semibold transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                disabled={currentPage === totalPages}
+              >
+                下一頁 →
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -489,9 +552,24 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             <div className="relative flex items-center justify-center bg-slate-950/60 p-4 sm:p-6">
               <div className="relative aspect-[16/10] w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-800 bg-black">
                 {selectedMedia.type === 'image' ? (
-                  <Image src={selectedMedia.url} alt={selectedMedia.key} fill className="object-contain" sizes="100vw" />
+                  <Image
+                    src={selectedMedia.url}
+                    alt={selectedMedia.key}
+                    fill
+                    loading="lazy"
+                    decoding="async"
+                    className="object-contain"
+                    sizes="100vw"
+                  />
                 ) : (
-                  <video className="h-full w-full bg-black object-contain" src={selectedMedia.url} controls autoPlay preload="metadata" />
+                  <video
+                    className="h-full w-full bg-black object-contain"
+                    src={selectedMedia.url}
+                    controls
+                    autoPlay
+                    preload="metadata"
+                    playsInline
+                  />
                 )}
               </div>
             </div>
