@@ -3,6 +3,8 @@
 import { useMemo } from 'react';
 import { MediaGrid } from '@/components/MediaGrid';
 
+export const runtime = 'edge';
+
 export default function Home({ params }: { params: { prefix?: string[] } }) {
   const refreshToken = 0;
 
