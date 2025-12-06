@@ -129,7 +129,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (body.isFolder) {
-      await deleteFolder(body.key);
+      await deleteFolder(body.key, { moveContentsToParent: true });
       return NextResponse.json({});
     }
 

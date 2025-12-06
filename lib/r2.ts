@@ -179,7 +179,12 @@ type ParsedListResult = {
   nextContinuationToken?: string;
 };
 
-function parseListResult(xml: string, searchPrefix: string, includeFolders: boolean): ParsedListResult {
+function parseListResult(
+  xml: string,
+  searchPrefix: string,
+  includeFolders: boolean,
+  options: { includePrefixObject?: boolean } = {}
+): ParsedListResult {
   const parsed = xmlParser.parse(xml).ListBucketResult;
 
   const folders: FolderItem[] = includeFolders
@@ -194,7 +199,7 @@ function parseListResult(xml: string, searchPrefix: string, includeFolders: bool
   const contents = ensureArray(parsed.Contents)
     .map((item: any) => {
       const key = readTextNode(item.Key);
-      if (!key || key === searchPrefix) return null;
+      if (!key || (!options.includePrefixObject && key === searchPrefix)) return null;
 
       const sizeText = readTextNode(item.Size);
       const lastModified = readTextNode(item.LastModified) || undefined;
@@ -216,10 +221,10 @@ function parseListResult(xml: string, searchPrefix: string, includeFolders: bool
   return { folders, contents, isTruncated, nextContinuationToken };
 }
 
-async function collectKeys(prefix: string) {
+async function collectKeys(prefix: string, options: { includePrefixObject?: boolean } = {}) {
   const keys: string[] = [];
   let continuationToken: string | undefined;
-  const searchPrefix = buildFolderKey(prefix);
+  const searchPrefix = buildFolderKey(sanitizePath(prefix));
 
   do {
     const url = buildListUrl(searchPrefix, { continuationToken });
@@ -228,7 +233,7 @@ async function collectKeys(prefix: string) {
       throw new Error(`Failed to list folder for processing: ${response.status} ${response.statusText}`);
     }
 
-    const { contents, nextContinuationToken } = parseListResult(await response.text(), searchPrefix, false);
+    const { contents, nextContinuationToken } = parseListResult(await response.text(), searchPrefix, false, options);
     keys.push(...contents.map((item) => item.key));
     continuationToken = nextContinuationToken;
   } while (continuationToken);
@@ -381,7 +386,7 @@ export async function renameFolder(key: string, newName: string) {
   const sourcePrefix = buildFolderKey(normalizedKey);
   const targetPrefix = buildFolderKey(newFolderPath);
 
-  const keys = await collectKeys(normalizedKey);
+  const keys = await collectKeys(normalizedKey, { includePrefixObject: true });
 
   for (const sourceKey of keys) {
     const targetKey = sourceKey.replace(sourcePrefix, targetPrefix);
@@ -403,12 +408,27 @@ export async function deleteFile(key: string) {
   }
 }
 
-export async function deleteFolder(prefix: string) {
+export async function deleteFolder(prefix: string, options: { moveContentsToParent?: boolean } = {}) {
   const normalizedPrefix = sanitizePath(prefix);
-  const targetPrefix = buildFolderKey(normalizedPrefix);
+  const parentPrefix = normalizedPrefix.split('/').slice(0, -1).join('/');
 
-  const keys = await collectKeys(targetPrefix);
+  const keys = await collectKeys(normalizedPrefix, { includePrefixObject: true });
   if (keys.length === 0) return;
+
+  if (options.moveContentsToParent) {
+    const safeParentPrefix = sanitizePath(parentPrefix);
+    const filesToMove = keys.filter((key) => !key.endsWith('/'));
+
+    for (const sourceKey of filesToMove) {
+      const filename = sourceKey.split('/').pop();
+      if (!filename) continue;
+
+      const targetKey = safeParentPrefix ? `${safeParentPrefix}/${filename}` : filename;
+      if (targetKey === sourceKey) continue;
+
+      await copyObjectWithinBucket(sourceKey, targetKey);
+    }
+  }
 
   await deleteObjects(keys);
 }
@@ -443,7 +463,7 @@ export async function moveFolder(key: string, targetPrefix: string) {
   const sourcePrefix = buildFolderKey(normalizedKey);
   const targetPrefixKey = buildFolderKey(targetFolderPath);
 
-  const keys = await collectKeys(normalizedKey);
+  const keys = await collectKeys(normalizedKey, { includePrefixObject: true });
 
   for (const sourceKey of keys) {
     const targetKey = sourceKey.replace(sourcePrefix, targetPrefixKey);
