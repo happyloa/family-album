@@ -1,7 +1,6 @@
 'use client';
 
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { UploadForm } from './UploadForm';
 
@@ -25,8 +24,9 @@ type MediaResponse = {
 };
 
 export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
-  const searchParams = useSearchParams();
-  const isAdmin = searchParams.has('isAdmin');
+  const [adminToken, setAdminToken] = useState('');
+  const [adminInput, setAdminInput] = useState('');
+  const isAdmin = Boolean(adminToken);
 
   const MAX_FOLDER_DEPTH = 2;
   const MAX_FOLDER_NAME_LENGTH = 30;
@@ -51,6 +51,14 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [filter, setFilter] = useState<'all' | 'image' | 'video'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : '';
+    if (saved) {
+      setAdminToken(saved);
+      setAdminInput(saved);
+    }
+  }, []);
 
   const breadcrumb = useMemo(
     () =>
@@ -83,6 +91,15 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   useEffect(() => {
     setCurrentPage(1);
   }, [filter]);
+
+  const authorizedFetch: typeof fetch = (input, init = {}) => {
+    const headers = new Headers(init.headers || {});
+    if (isAdmin && adminToken) {
+      headers.set('x-admin-token', adminToken);
+    }
+
+    return fetch(input, { ...init, headers });
+  };
 
   const loadMedia = async (prefix = currentPrefix) => {
     setLoading(true);
@@ -124,6 +141,25 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     setCurrentPrefix(parts.join('/'));
   };
 
+  const handleSaveAdminToken = () => {
+    const trimmed = adminInput.trim();
+    setAdminToken(trimmed);
+    if (trimmed) {
+      localStorage.setItem('adminToken', trimmed);
+      setMessage('已啟用管理模式');
+    } else {
+      localStorage.removeItem('adminToken');
+      setMessage('管理密碼已清除');
+    }
+  };
+
+  const handleClearAdminToken = () => {
+    setAdminInput('');
+    setAdminToken('');
+    localStorage.removeItem('adminToken');
+    setMessage('已退出管理模式');
+  };
+
   const handleCreateFolder = async () => {
     if (!isAdmin) return;
 
@@ -145,7 +181,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       return;
     }
 
-    const response = await fetch('/api/media', {
+    const response = await authorizedFetch('/api/media', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'create-folder', name: safeName, prefix: currentPrefix })
@@ -175,7 +211,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       return;
     }
 
-    const response = await fetch('/api/media', {
+    const response = await authorizedFetch('/api/media', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'rename', key, newName, isFolder })
@@ -208,7 +244,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       return;
     }
 
-    const response = await fetch('/api/media', {
+    const response = await authorizedFetch('/api/media', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'move', key, targetPrefix, isFolder })
@@ -229,7 +265,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     const confirmed = window.confirm(`確定要刪除${isFolder ? '資料夾與其內容' : '檔案'}嗎？`);
     if (!confirmed) return;
 
-    const response = await fetch('/api/media', {
+    const response = await authorizedFetch('/api/media', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'delete', key, isFolder })
@@ -245,36 +281,101 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   };
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-5">
       <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-2xl ring-1 ring-white/5 sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <p className="text-sm font-semibold text-emerald-300">家庭相簿 · R2 即時同步</p>
-            <h2 className="text-2xl font-bold text-white">資料夾與媒體管理</h2>
+            <h2 className="text-2xl font-bold text-white">媒體控制台</h2>
             <p className="text-sm leading-relaxed text-slate-300">
-              使用雙層資料夾結構直接管理 Cloudflare R2 的媒體，支援上傳、重新命名、移動與刪除。
+              快速檢視路徑、啟用安全管理密碼，並在需要時開啟管理模式處理上傳與編輯。
             </p>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">目前路徑</p>
-            <p className="mt-2 text-lg font-bold text-white">{currentPrefix || '根目錄'}</p>
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">目前路徑</p>
+                <p className="text-xl font-bold text-white">{currentPrefix || '根目錄'}</p>
+                <p className="text-xs text-slate-400">僅顯示兩層資料夾。善用下方導覽與篩選控制快速跳轉。</p>
+              </div>
+              <div className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-500/20">
+                {folders.length} 資料夾 · {files.length} 媒體
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {[
+                { label: '回到上一層', action: handleBack, disabled: !currentPrefix },
+                { label: '重新整理', action: () => loadMedia(currentPrefix), disabled: loading },
+                { label: '清空提示', action: () => setMessage(''), disabled: !message }
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  type="button"
+                  onClick={item.action}
+                  disabled={item.disabled}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">資料夾</p>
-            <p className="mt-2 text-2xl font-extrabold text-emerald-300">{folders.length}</p>
-            <p className="text-xs text-slate-400">最多兩層結構，點擊卡片即可進入</p>
-          </div>
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">媒體檔案</p>
-            <p className="mt-2 text-2xl font-extrabold text-cyan-300">{files.length}</p>
-            <p className="text-xs text-slate-400">圖片與影片皆可直接預覽</p>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">安全管理</p>
+                <h3 className="text-lg font-semibold text-white">輸入管理密碼啟用編輯權限</h3>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                  isAdmin
+                    ? 'bg-emerald-500/15 text-emerald-100 ring-emerald-400/40'
+                    : 'bg-slate-800 text-slate-200 ring-slate-600'
+                }`}
+              >
+                {isAdmin ? '管理模式開啟' : '唯讀模式'}
+              </span>
+            </div>
+            <div className="mt-4 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                <input
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+                  type="password"
+                  value={adminInput}
+                  placeholder="輸入管理密碼以進行上傳與修改"
+                  onChange={(event) => setAdminInput(event.target.value)}
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-cyan-300 hover:to-emerald-300"
+                    type="button"
+                    onClick={handleSaveAdminToken}
+                  >
+                    儲存管理密碼
+                  </button>
+                  {isAdmin && (
+                    <button
+                      className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:border-rose-400 hover:text-rose-100"
+                      type="button"
+                      onClick={handleClearAdminToken}
+                    >
+                      退出管理模式
+                    </button>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-slate-400">
+                上傳、刪除或移動等寫入操作都需要管理密碼，適合公開展示但僅限家人能管理的情境。
+              </p>
+            </div>
           </div>
         </div>
 
-        {isAdmin && (
+        {isAdmin ? (
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
               <div className="flex items-start justify-between gap-3">
@@ -303,7 +404,11 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
               </div>
             </div>
 
-            <UploadForm currentPath={currentPrefix} onUploaded={() => loadMedia(currentPrefix)} />
+            <UploadForm adminToken={adminToken} currentPath={currentPrefix} onUploaded={() => loadMedia(currentPrefix)} />
+          </div>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-sm text-slate-200">
+            目前為唯讀瀏覽。若要上傳、重新命名或刪除，請先在右側輸入管理密碼以開啟管理模式。
           </div>
         )}
       </div>

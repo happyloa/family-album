@@ -4,10 +4,12 @@ import { FormEvent, useEffect, useState } from 'react';
 
 export function UploadForm({
   onUploaded,
-  currentPath = ''
+  currentPath = '',
+  adminToken = ''
 }: {
   onUploaded?: () => void;
   currentPath?: string;
+  adminToken?: string;
 }) {
   // 使用陣列保存檔案，方便一次上傳多個媒體
   const [files, setFiles] = useState<File[]>([]);
@@ -153,7 +155,8 @@ export function UploadForm({
 
     const response = await fetch('/api/upload', {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers: adminToken ? { 'x-admin-token': adminToken } : undefined
     });
 
     if (!response.ok) {

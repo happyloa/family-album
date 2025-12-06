@@ -23,7 +23,7 @@ export default function Home() {
                 家庭雲端相簿中心
               </h1>
               <p className="max-w-2xl text-lg leading-relaxed text-slate-200">
-                這裡集中保存全家的照片與影片，直接同步到 Cloudflare R2，方便備份、整理與分享。
+                這裡集中保存全家的照片與影片，直接同步到 Cloudflare R2，方便備份、整理與分享，同時透過管理密碼避免陌生人修改內容。
               </p>
             </div>
           </div>

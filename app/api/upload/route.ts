@@ -3,8 +3,26 @@ import { uploadToR2 } from '@/lib/r2';
 
 export const runtime = 'edge';
 
+function ensureAdmin(request: Request) {
+  const adminToken = process.env.ADMIN_ACCESS_TOKEN;
+  if (!adminToken) {
+    console.error('Missing ADMIN_ACCESS_TOKEN');
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+  }
+
+  const providedToken = request.headers.get('x-admin-token');
+  if (!providedToken || providedToken !== adminToken) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  return null;
+}
+
 export async function POST(request: Request) {
   try {
+    const authError = ensureAdmin(request);
+    if (authError) return authError;
+
     const formData = await request.formData();
     // 支援多檔案上傳，並在此集中取出所有 File 物件
     const files = formData.getAll('files').filter((item): item is File => item instanceof File);
