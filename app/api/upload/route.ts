@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { uploadToR2 } from '@/lib/r2';
 
-export const runtime = 'edge';
+// 使用 Node.js 執行環境來避開 Edge Runtime 的小檔案限制，
+// 以便處理較大的影片上傳並確保媒體檔案完整性。
+export const runtime = 'nodejs';
 
 function ensureAdmin(request: Request) {
   const adminToken = process.env.ADMIN_ACCESS_TOKEN;
