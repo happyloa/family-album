@@ -51,6 +51,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [filter, setFilter] = useState<'all' | 'image' | 'video'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+  const MAX_ADMIN_TOKEN_LENGTH = 15;
 
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : '';
@@ -147,6 +148,15 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       if (!options?.silent) {
         setMessage('請輸入管理密碼');
       }
+      return false;
+    }
+
+    if (trimmed.length > MAX_ADMIN_TOKEN_LENGTH) {
+      if (!options?.silent) {
+        setMessage('管理密碼最多 15 個字');
+      }
+      setAdminToken('');
+      localStorage.removeItem('adminToken');
       return false;
     }
 
@@ -375,6 +385,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                 <input
                   className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
                   type="password"
+                  maxLength={MAX_ADMIN_TOKEN_LENGTH}
                   value={adminInput}
                   placeholder="輸入管理密碼以進行上傳與修改"
                   onChange={(event) => setAdminInput(event.target.value)}
