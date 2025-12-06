@@ -47,6 +47,10 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    if (body?.action === 'validate') {
+      return NextResponse.json({ ok: true });
+    }
+
     if (body?.action !== 'create-folder') {
       return NextResponse.json({ error: '未知的請求' }, { status: 400 });
     }

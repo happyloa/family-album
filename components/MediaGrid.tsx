@@ -55,8 +55,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : '';
     if (saved) {
-      setAdminToken(saved);
-      setAdminInput(saved);
+      void validateAndApplyToken(saved, { silent: true });
     }
   }, []);
 
@@ -141,16 +140,47 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     setCurrentPrefix(parts.join('/'));
   };
 
-  const handleSaveAdminToken = () => {
-    const trimmed = adminInput.trim();
-    setAdminToken(trimmed);
-    if (trimmed) {
-      localStorage.setItem('adminToken', trimmed);
-      setMessage('已啟用管理模式');
-    } else {
-      localStorage.removeItem('adminToken');
-      setMessage('管理密碼已清除');
+  const validateAndApplyToken = async (token: string, options?: { silent?: boolean }) => {
+    const trimmed = token.trim();
+    if (!trimmed) {
+      setAdminToken('');
+      if (!options?.silent) {
+        setMessage('請輸入管理密碼');
+      }
+      return false;
     }
+
+    if (!options?.silent) {
+      setMessage('正在驗證管理密碼…');
+    }
+
+    const response = await fetch('/api/media', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-token': trimmed
+      },
+      body: JSON.stringify({ action: 'validate' })
+    });
+
+    if (!response.ok) {
+      localStorage.removeItem('adminToken');
+      setAdminInput('');
+      if (!options?.silent) {
+        setMessage('管理密碼不正確，請再試一次');
+      }
+      return false;
+    }
+
+    setAdminToken(trimmed);
+    localStorage.setItem('adminToken', trimmed);
+    setAdminInput(trimmed);
+    setMessage(options?.silent ? '' : '已啟用管理模式');
+    return true;
+  };
+
+  const handleSaveAdminToken = () => {
+    void validateAndApplyToken(adminInput);
   };
 
   const handleClearAdminToken = () => {
