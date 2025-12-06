@@ -378,39 +378,42 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
               </span>
             </div>
             <div className="mt-4 space-y-3">
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-                <input
-                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-                  type="password"
-                  maxLength={MAX_ADMIN_TOKEN_LENGTH}
-                  value={adminInput}
-                  placeholder="輸入管理密碼以進行上傳與修改"
-                  onChange={(event) => setAdminInput(event.target.value)}
-                />
-                <div className="flex flex-wrap gap-2">
+              {isAdmin ? (
+                <div className="flex justify-end">
                   <button
-                    className="rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-cyan-300 hover:to-emerald-300"
+                    className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:border-rose-400 hover:text-rose-100"
                     type="button"
-                    onClick={handleSaveAdminToken}
+                    onClick={handleClearAdminToken}
                   >
-                    儲存管理密碼
+                    退出管理模式
                   </button>
-                  {isAdmin && (
-                    <button
-                      className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:border-rose-400 hover:text-rose-100"
-                      type="button"
-                      onClick={handleClearAdminToken}
-                    >
-                      退出管理模式
-                    </button>
-                  )}
                 </div>
-              </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                  <input
+                    className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+                    type="password"
+                    maxLength={MAX_ADMIN_TOKEN_LENGTH}
+                    value={adminInput}
+                    placeholder="輸入管理密碼以進行上傳與修改"
+                    onChange={(event) => setAdminInput(event.target.value)}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-cyan-300 hover:to-emerald-300"
+                      type="button"
+                      onClick={handleSaveAdminToken}
+                    >
+                      驗證管理密碼
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {isAdmin ? (
+        {isAdmin && (
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
               <div className="flex items-start justify-between gap-3">
@@ -441,8 +444,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
             <UploadForm adminToken={adminToken} currentPath={currentPrefix} onUploaded={() => loadMedia(currentPrefix)} />
           </div>
-        ) : (
-          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-sm text-slate-200">目前為唯讀瀏覽。</div>
         )}
       </div>
 
