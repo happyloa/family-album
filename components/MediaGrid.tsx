@@ -523,7 +523,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           <div className="space-y-2">
             <h3 className="text-xl font-semibold text-white">這個資料夾是空的</h3>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-300">
-              就像雲端硬碟一樣，拖曳媒體到上方上傳區，或建立資料夾來整理檔案。支援圖片與影片。
+              拖曳媒體到上方上傳區，或建立資料夾來整理檔案。支援圖片與影片。
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
