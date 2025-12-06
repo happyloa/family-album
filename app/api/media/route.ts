@@ -14,6 +14,21 @@ import {
 // builds. The R2 client in lib/r2.ts is implemented with fetch so it works here.
 export const runtime = 'edge';
 
+function ensureAdmin(request: NextRequest) {
+  const adminToken = process.env.ADMIN_ACCESS_TOKEN;
+  if (!adminToken) {
+    console.error('Missing ADMIN_ACCESS_TOKEN');
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+  }
+
+  const providedToken = request.headers.get('x-admin-token');
+  if (!providedToken || providedToken !== adminToken) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const prefix = request.nextUrl.searchParams.get('prefix') || '';
@@ -27,7 +42,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authError = ensureAdmin(request);
+    if (authError) return authError;
+
     const body = await request.json();
+
+    if (body?.action === 'validate') {
+      return NextResponse.json({ ok: true });
+    }
 
     if (body?.action !== 'create-folder') {
       return NextResponse.json({ error: '未知的請求' }, { status: 400 });
@@ -47,6 +69,9 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const authError = ensureAdmin(request);
+    if (authError) return authError;
+
     const body = await request.json();
 
     if (body?.action !== 'rename' && body?.action !== 'move') {
@@ -90,6 +115,9 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const authError = ensureAdmin(request);
+    if (authError) return authError;
+
     const body = await request.json();
 
     if (body?.action !== 'delete') {
