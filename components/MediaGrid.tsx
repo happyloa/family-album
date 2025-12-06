@@ -48,6 +48,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [newFolderName, setNewFolderName] = useState('');
   const [message, setMessage] = useState('');
   const [selectedMedia, setSelectedMedia] = useState<MediaFile | null>(null);
+  const [filter, setFilter] = useState<'all' | 'image' | 'video'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
@@ -62,17 +63,26 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     [currentPrefix]
   );
 
-  const totalPages = Math.max(1, Math.ceil(files.length / itemsPerPage));
+  const filteredFiles = useMemo(
+    () => (filter === 'all' ? files : files.filter((file) => file.type === filter)),
+    [files, filter]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredFiles.length / itemsPerPage));
   const paginatedFiles = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return files.slice(start, start + itemsPerPage);
-  }, [currentPage, files, itemsPerPage]);
+    return filteredFiles.slice(start, start + itemsPerPage);
+  }, [currentPage, filteredFiles, itemsPerPage]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
 
   const loadMedia = async (prefix = currentPrefix) => {
     setLoading(true);
@@ -441,8 +451,40 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       {files.length > 0 && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-xl font-semibold text-white">媒體檔案</h3>
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-semibold text-white">媒體檔案</h3>
+              <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-200">
+                目前篩選：{filter === 'all' ? '全部' : filter === 'image' ? '僅圖片' : '僅影片'}（共 {filteredFiles.length}）
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {(
+                [
+                  { key: 'all', label: '全部' },
+                  { key: 'image', label: '圖片' },
+                  { key: 'video', label: '影片' }
+                ] as const
+              ).map(({ key, label }) => (
+                <button
+                  key={key}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                    filter === key
+                      ? 'border-emerald-400 bg-emerald-500/15 text-emerald-100 shadow-glow'
+                      : 'border-slate-700 text-slate-100 hover:border-emerald-300 hover:text-emerald-100'
+                  }`}
+                  onClick={() => setFilter(key)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
+          {filteredFiles.length === 0 && (
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-200">
+              目前篩選條件下沒有媒體，請切換篩選或重新整理。
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {paginatedFiles.map((item) => (
               <article key={item.key} className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-lg">
@@ -521,7 +563,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
               </article>
             ))}
           </div>
-          {files.length > itemsPerPage && (
+          {filteredFiles.length > itemsPerPage && (
             <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-100">
               <button
                 className="rounded-lg border border-slate-700 px-3 py-1.5 font-semibold transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
