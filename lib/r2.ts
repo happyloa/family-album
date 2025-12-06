@@ -174,7 +174,7 @@ function inferType(key: string): MediaFile['type'] {
 
 type ParsedListResult = {
   folders: FolderItem[];
-  contents: { key: string; size?: number; lastModified?: string }[];
+  contents: { key: string; size: number | undefined; lastModified: string | undefined }[];
   isTruncated: boolean;
   nextContinuationToken?: string;
 };
@@ -205,7 +205,10 @@ function parseListResult(xml: string, searchPrefix: string, includeFolders: bool
         lastModified
       };
     })
-    .filter((item): item is { key: string; size?: number; lastModified?: string } => Boolean(item));
+    .filter(
+      (item): item is { key: string; size: number | undefined; lastModified: string | undefined } =>
+        Boolean(item)
+    );
 
   const isTruncated = readTextNode(parsed.IsTruncated) === 'true';
   const nextContinuationToken = isTruncated ? readTextNode(parsed.NextContinuationToken) || undefined : undefined;
