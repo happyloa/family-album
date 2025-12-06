@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 
 export function UploadForm({
   onUploaded,
@@ -17,10 +17,20 @@ export function UploadForm({
   const [loading, setLoading] = useState(false);
   const [path, setPath] = useState(currentPath);
   const [progress, setProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const resetFeedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setPath(currentPath);
   }, [currentPath]);
+
+  useEffect(() => {
+    return () => {
+      if (resetFeedbackTimeout.current) {
+        clearTimeout(resetFeedbackTimeout.current);
+      }
+    };
+  }, []);
 
   // 針對圖片使用 canvas 降解析度後輸出，降低檔案大小
   const compressImage = async (file: File) => {
@@ -197,7 +207,17 @@ export function UploadForm({
       setProgress(100);
       setFiles([]);
       setPath(currentPath);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       onUploaded?.();
+      if (resetFeedbackTimeout.current) {
+        clearTimeout(resetFeedbackTimeout.current);
+      }
+      resetFeedbackTimeout.current = setTimeout(() => {
+        setProgress(0);
+        setStatus('');
+      }, 5000);
     }
     setLoading(false);
   };
@@ -219,6 +239,7 @@ export function UploadForm({
           type="file"
           accept="image/*,video/*"
           multiple
+          ref={fileInputRef}
           onChange={(event) => {
             const selected = Array.from(event.target.files ?? []).filter((media) =>
               media.type.startsWith('image/') || media.type.startsWith('video/')
