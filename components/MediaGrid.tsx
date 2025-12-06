@@ -54,6 +54,12 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const MAX_ADMIN_TOKEN_LENGTH = 15;
 
   useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(''), 5000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : '';
     if (saved) {
       void validateAndApplyToken(saved, { silent: true });
@@ -321,7 +327,15 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   };
 
   return (
-    <section className="space-y-5">
+    <section className="relative space-y-5">
+      {message && (
+        <div className="pointer-events-none fixed right-4 top-4 z-50 flex flex-col gap-3 sm:right-6 sm:top-6">
+          <div className="pointer-events-auto w-72 rounded-2xl border border-amber-500/40 bg-slate-950/90 px-4 py-3 text-sm font-semibold text-amber-50 shadow-lg shadow-amber-500/20">
+            {message}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-2xl ring-1 ring-white/5 sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
@@ -344,23 +358,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
               <div className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-500/20">
                 {folders.length} 資料夾 · {files.length} 媒體
               </div>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {[
-                { label: '回到上一層', action: handleBack, disabled: !currentPrefix },
-                { label: '重新整理', action: () => loadMedia(currentPrefix), disabled: loading },
-                { label: '清空提示', action: () => setMessage(''), disabled: !message }
-              ].map((item) => (
-                <button
-                  key={item.label}
-                  className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  type="button"
-                  onClick={item.action}
-                  disabled={item.disabled}
-                >
-                  {item.label}
-                </button>
-              ))}
             </div>
           </div>
 
@@ -409,9 +406,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                   )}
                 </div>
               </div>
-              <p className="text-xs text-slate-400">
-                上傳、刪除或移動等寫入操作都需要管理密碼，適合公開展示但僅限家人能管理的情境。
-              </p>
             </div>
           </div>
         </div>
@@ -448,18 +442,11 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             <UploadForm adminToken={adminToken} currentPath={currentPrefix} onUploaded={() => loadMedia(currentPrefix)} />
           </div>
         ) : (
-          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-sm text-slate-200">
-            目前為唯讀瀏覽。若要上傳、重新命名或刪除，請先在右側輸入管理密碼以開啟管理模式。
-          </div>
+          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-sm text-slate-200">目前為唯讀瀏覽。</div>
         )}
       </div>
 
-      {message && (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-100">
-          {message}
-        </div>
-      )}
-      {loading && !message && (
+      {loading && (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-200">正在載入媒體…</div>
       )}
       {!loading && !hasItems && (
