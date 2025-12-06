@@ -16,6 +16,7 @@ export function UploadForm({
   const [status, setStatus] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [path, setPath] = useState(currentPath);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     setPath(currentPath);
@@ -140,6 +141,7 @@ export function UploadForm({
     event.preventDefault();
     if (!files.length) return;
     setLoading(true);
+    setProgress(0);
     setStatus('壓縮與上傳中...');
 
     const compressedFiles: File[] = [];
@@ -153,16 +155,46 @@ export function UploadForm({
     compressedFiles.forEach((mediaFile) => formData.append('files', mediaFile));
     formData.append('path', path);
 
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-      headers: adminToken ? { 'x-admin-token': adminToken } : undefined
+    const response = await new Promise<Response>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      request.open('POST', '/api/upload');
+
+      if (adminToken) {
+        request.setRequestHeader('x-admin-token', adminToken);
+      }
+
+      request.upload.onprogress = (event) => {
+        if (!event.lengthComputable) {
+          setStatus('上傳中...');
+          return;
+        }
+
+        const percent = Math.round((event.loaded / event.total) * 100);
+        setProgress(percent);
+        setStatus(`上傳中... ${percent}%`);
+      };
+
+      request.onload = () => {
+        resolve(new Response(request.response, { status: request.status, statusText: request.statusText }));
+      };
+
+      request.onerror = () => {
+        reject(new Error('上傳時發生錯誤'));
+      };
+
+      request.onabort = () => {
+        reject(new Error('上傳已被中止'));
+      };
+
+      request.send(formData);
     });
 
     if (!response.ok) {
       setStatus('上傳失敗，請稍後再試。');
+      setProgress(0);
     } else {
       setStatus('完成！');
+      setProgress(100);
       setFiles([]);
       setPath(currentPath);
       onUploaded?.();
@@ -229,6 +261,20 @@ export function UploadForm({
         >
           {loading ? '處理中...' : '上傳檔案'}
         </button>
+        {(loading || progress > 0) && (
+          <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/50 p-3">
+            <div className="flex items-center justify-between text-xs font-semibold text-emerald-200">
+              <span>上傳進度</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 transition-[width] duration-200"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        )}
         {status && <p className="text-sm font-semibold text-emerald-200">{status}</p>}
       </div>
     </form>
