@@ -29,13 +29,25 @@ export type MediaListing = {
 
 const processEnv = typeof process !== 'undefined' ? process.env : undefined;
 
-const env = {
-  R2_ACCOUNT_ID: processEnv?.R2_ACCOUNT_ID,
-  R2_ACCESS_KEY_ID: processEnv?.R2_ACCESS_KEY_ID,
-  R2_SECRET_ACCESS_KEY: processEnv?.R2_SECRET_ACCESS_KEY,
-  R2_BUCKET_NAME: processEnv?.R2_BUCKET_NAME,
-  R2_PUBLIC_BASE: processEnv?.R2_PUBLIC_BASE
-} as const;
+function loadEnv(): Record<EnvKeys, string> {
+  const entries: Partial<Record<EnvKeys, string>> = {
+    R2_ACCOUNT_ID: processEnv?.R2_ACCOUNT_ID,
+    R2_ACCESS_KEY_ID: processEnv?.R2_ACCESS_KEY_ID,
+    R2_SECRET_ACCESS_KEY: processEnv?.R2_SECRET_ACCESS_KEY,
+    R2_BUCKET_NAME: processEnv?.R2_BUCKET_NAME,
+    R2_PUBLIC_BASE: processEnv?.R2_PUBLIC_BASE
+  };
+
+  for (const [key, value] of Object.entries(entries) as [EnvKeys, string | undefined][]) {
+    if (!value) {
+      throw new Error(`Missing environment variable: ${key}`);
+    }
+  }
+
+  return entries as Record<EnvKeys, string>;
+}
+
+const env = loadEnv();
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -45,27 +57,12 @@ const xmlParser = new XMLParser({
 
 let cachedClient: AwsClient | null = null;
 
-function getEnv(): Record<EnvKeys, string> {
-  const values: Partial<Record<EnvKeys, string>> = {};
-
-  for (const [key, value] of Object.entries(env) as [EnvKeys, string | undefined][]) {
-    if (!value) {
-      throw new Error(`Missing environment variable: ${key}`);
-    }
-    values[key] = value;
-  }
-
-  return values as Record<EnvKeys, string>;
-}
-
 function getClient() {
   if (cachedClient) return cachedClient;
 
-  const { R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = getEnv();
-
   cachedClient = new AwsClient({
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
+    accessKeyId: env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
     service: 's3',
     region: 'auto'
   });
@@ -150,9 +147,21 @@ async function signedFetch(input: string, init?: RequestInit) {
 }
 
 function buildEndpointPath(path: string) {
-  const { R2_ACCOUNT_ID } = getEnv();
-  const endpoint = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
+  const endpoint = `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   return new URL(path, endpoint).toString();
+}
+
+function buildListUrl(prefix: string, options: { continuationToken?: string; delimiter?: string } = {}) {
+  const url = new URL(buildEndpointPath(`/${env.R2_BUCKET_NAME}`));
+  url.searchParams.set('list-type', '2');
+  url.searchParams.set('prefix', prefix);
+  if (options.delimiter) {
+    url.searchParams.set('delimiter', options.delimiter);
+  }
+  if (options.continuationToken) {
+    url.searchParams.set('continuation-token', options.continuationToken);
+  }
+  return url;
 }
 
 function inferType(key: string): MediaFile['type'] {
@@ -163,48 +172,125 @@ function inferType(key: string): MediaFile['type'] {
   return 'image';
 }
 
+type ParsedListResult = {
+  folders: FolderItem[];
+  contents: { key: string; size: number | undefined; lastModified: string | undefined }[];
+  isTruncated: boolean;
+  nextContinuationToken?: string;
+};
+
+function parseListResult(xml: string, searchPrefix: string, includeFolders: boolean): ParsedListResult {
+  const parsed = xmlParser.parse(xml).ListBucketResult;
+
+  const folders: FolderItem[] = includeFolders
+    ? ensureArray(parsed.CommonPrefixes).map((item: any) => {
+        const prefixKey = readTextNode(item.Prefix);
+        const relativeKey = prefixKey.replace(/\/$/, '');
+        const name = relativeKey.split('/').pop() ?? relativeKey;
+        return { key: relativeKey, name } as FolderItem;
+      })
+    : [];
+
+  const contents = ensureArray(parsed.Contents)
+    .map((item: any) => {
+      const key = readTextNode(item.Key);
+      if (!key || key === searchPrefix) return null;
+
+      const sizeText = readTextNode(item.Size);
+      const lastModified = readTextNode(item.LastModified) || undefined;
+
+      return {
+        key,
+        size: sizeText ? Number(sizeText) : undefined,
+        lastModified
+      };
+    })
+    .filter(
+      (item): item is { key: string; size: number | undefined; lastModified: string | undefined } =>
+        Boolean(item)
+    );
+
+  const isTruncated = readTextNode(parsed.IsTruncated) === 'true';
+  const nextContinuationToken = isTruncated ? readTextNode(parsed.NextContinuationToken) || undefined : undefined;
+
+  return { folders, contents, isTruncated, nextContinuationToken };
+}
+
+async function collectKeys(prefix: string) {
+  const keys: string[] = [];
+  let continuationToken: string | undefined;
+  const searchPrefix = buildFolderKey(prefix);
+
+  do {
+    const url = buildListUrl(searchPrefix, { continuationToken });
+    const response = await signedFetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`Failed to list folder for processing: ${response.status} ${response.statusText}`);
+    }
+
+    const { contents, nextContinuationToken } = parseListResult(await response.text(), searchPrefix, false);
+    keys.push(...contents.map((item) => item.key));
+    continuationToken = nextContinuationToken;
+  } while (continuationToken);
+
+  return keys;
+}
+
+async function deleteObjects(keys: string[]) {
+  while (keys.length > 0) {
+    const batch = keys.splice(0, 1000);
+    const deleteUrl = buildEndpointPath(`/${env.R2_BUCKET_NAME}?delete`);
+    const deleteBody = `<Delete>${batch
+      .map((key) => `<Object><Key>${escapeXml(key)}</Key></Object>`)
+      .join('')}</Delete>`;
+
+    const deleteResponse = await signedFetch(deleteUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/xml'
+      },
+      body: deleteBody
+    });
+
+    if (!deleteResponse.ok) {
+      throw new Error(`Failed to delete objects: ${deleteResponse.status} ${deleteResponse.statusText}`);
+    }
+  }
+}
+
+async function copyObjectWithinBucket(sourceKey: string, targetKey: string) {
+  const copyUrl = buildEndpointPath(`/${env.R2_BUCKET_NAME}/${targetKey}`);
+  const copyResponse = await signedFetch(copyUrl, {
+    method: 'PUT',
+    headers: {
+      'x-amz-copy-source': encodeCopySource(env.R2_BUCKET_NAME, sourceKey),
+      'x-amz-acl': 'private'
+    }
+  });
+
+  if (!copyResponse.ok) {
+    throw new Error(`Failed to copy object: ${copyResponse.status} ${copyResponse.statusText}`);
+  }
+}
+
 export async function listMedia(prefix = ''): Promise<MediaListing> {
-  const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
   const normalizedPrefix = sanitizePath(prefix);
   const searchPrefix = buildFolderKey(normalizedPrefix);
 
-  const url = new URL(buildEndpointPath(`/${R2_BUCKET_NAME}`));
-  url.searchParams.set('list-type', '2');
-  url.searchParams.set('prefix', searchPrefix);
-  url.searchParams.set('delimiter', '/');
-
-  const response = await signedFetch(url.toString());
+  const response = await signedFetch(buildListUrl(searchPrefix, { delimiter: '/' }).toString());
   if (!response.ok) {
     throw new Error(`Failed to list objects: ${response.status} ${response.statusText}`);
   }
 
-  const xml = await response.text();
-  const parsed = xmlParser.parse(xml).ListBucketResult;
+  const { folders, contents } = parseListResult(await response.text(), searchPrefix, true);
 
-  const folders: FolderItem[] = ensureArray(parsed.CommonPrefixes).map((item: any) => {
-    const prefixKey = readTextNode(item.Prefix);
-    const relativeKey = prefixKey.replace(/\/$/, '');
-    const name = relativeKey.split('/').pop() ?? relativeKey;
-    return { key: relativeKey, name } as FolderItem;
-  });
-
-  const files: MediaFile[] = ensureArray(parsed.Contents).reduce<MediaFile[]>((acc, item: any) => {
-    const key = readTextNode(item.Key);
-    if (!key || key === searchPrefix) return acc;
-
-    const sizeText = readTextNode(item.Size);
-    const lastModified = readTextNode(item.LastModified) || undefined;
-
-    acc.push({
-      key,
-      url: encodeKeyForUrl(key, R2_PUBLIC_BASE),
-      type: inferType(key),
-      size: sizeText ? Number(sizeText) : undefined,
-      lastModified
-    });
-
-    return acc;
-  }, []);
+  const files: MediaFile[] = contents.map((item) => ({
+    key: item.key,
+    url: encodeKeyForUrl(item.key, env.R2_PUBLIC_BASE),
+    type: inferType(item.key),
+    size: item.size,
+    lastModified: item.lastModified
+  }));
 
   return {
     prefix: normalizedPrefix,
@@ -214,12 +300,11 @@ export async function listMedia(prefix = ''): Promise<MediaListing> {
 }
 
 export async function uploadToR2(file: File, targetPrefix = '') {
-  const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
   const normalizedPrefix = sanitizePath(targetPrefix);
   const key = `${buildFolderKey(normalizedPrefix)}${Date.now()}-${file.name}`;
   const body = new Uint8Array(await file.arrayBuffer());
 
-  const url = buildEndpointPath(`/${R2_BUCKET_NAME}/${key}`);
+  const url = buildEndpointPath(`/${env.R2_BUCKET_NAME}/${key}`);
   const response = await signedFetch(url, {
     method: 'PUT',
     body,
@@ -236,19 +321,18 @@ export async function uploadToR2(file: File, targetPrefix = '') {
 
   return {
     key,
-    url: encodeKeyForUrl(key, R2_PUBLIC_BASE),
+    url: encodeKeyForUrl(key, env.R2_PUBLIC_BASE),
     type: inferType(key)
   } satisfies MediaFile;
 }
 
 export async function createFolder(prefix: string, name: string) {
-  const { R2_BUCKET_NAME } = getEnv();
   const normalizedPrefix = sanitizePath(prefix);
   const normalizedName = sanitizeSegment(name);
   const folderPath = normalizedPrefix ? `${normalizedPrefix}/${normalizedName}` : normalizedName;
   const folderKey = `${buildFolderKey(folderPath)}`;
 
-  const url = buildEndpointPath(`/${R2_BUCKET_NAME}/${folderKey}`);
+  const url = buildEndpointPath(`/${env.R2_BUCKET_NAME}/${folderKey}`);
   const response = await signedFetch(url, {
     method: 'PUT',
     body: new Uint8Array(),
@@ -265,7 +349,6 @@ export async function createFolder(prefix: string, name: string) {
 }
 
 export async function renameFile(key: string, newName: string) {
-  const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
   const parent = parts.slice(0, -1).join('/');
@@ -274,20 +357,9 @@ export async function renameFile(key: string, newName: string) {
   const sourceKey = buildObjectKey(normalizedKey);
   const targetKey = buildObjectKey(newKey);
 
-  const copyUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${targetKey}`);
-  const copyResponse = await signedFetch(copyUrl, {
-    method: 'PUT',
-    headers: {
-      'x-amz-copy-source': encodeCopySource(R2_BUCKET_NAME, sourceKey),
-      'x-amz-acl': 'private'
-    }
-  });
+  await copyObjectWithinBucket(sourceKey, targetKey);
 
-  if (!copyResponse.ok) {
-    throw new Error(`Failed to copy file: ${copyResponse.status} ${copyResponse.statusText}`);
-  }
-
-  const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${sourceKey}`);
+  const deleteUrl = buildEndpointPath(`/${env.R2_BUCKET_NAME}/${sourceKey}`);
   const deleteResponse = await signedFetch(deleteUrl, { method: 'DELETE' });
   if (!deleteResponse.ok && deleteResponse.status !== 404) {
     throw new Error(`Failed to delete old file: ${deleteResponse.status} ${deleteResponse.statusText}`);
@@ -295,13 +367,12 @@ export async function renameFile(key: string, newName: string) {
 
   return {
     key: newKey,
-    url: encodeKeyForUrl(targetKey, R2_PUBLIC_BASE),
+    url: encodeKeyForUrl(targetKey, env.R2_PUBLIC_BASE),
     type: inferType(targetKey)
   } satisfies MediaFile;
 }
 
 export async function renameFolder(key: string, newName: string) {
-  const { R2_BUCKET_NAME } = getEnv();
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
   const parent = parts.slice(0, -1).join('/');
@@ -310,77 +381,21 @@ export async function renameFolder(key: string, newName: string) {
   const sourcePrefix = buildFolderKey(normalizedKey);
   const targetPrefix = buildFolderKey(newFolderPath);
 
-  let continuationToken: string | undefined;
-  const toDelete: string[] = [];
+  const keys = await collectKeys(normalizedKey);
 
-  do {
-    const listUrl = new URL(buildEndpointPath(`/${R2_BUCKET_NAME}`));
-    listUrl.searchParams.set('list-type', '2');
-    listUrl.searchParams.set('prefix', sourcePrefix);
-    if (continuationToken) {
-      listUrl.searchParams.set('continuation-token', continuationToken);
-    }
-
-    const listResponse = await signedFetch(listUrl.toString());
-    if (!listResponse.ok) {
-      throw new Error(`Failed to list folder for rename: ${listResponse.status} ${listResponse.statusText}`);
-    }
-
-    const xml = await listResponse.text();
-    const parsed = xmlParser.parse(xml).ListBucketResult;
-
-    for (const item of ensureArray(parsed.Contents)) {
-      const sourceKey = readTextNode(item.Key);
-      if (!sourceKey) continue;
-      const targetKey = sourceKey.replace(sourcePrefix, targetPrefix);
-
-      const copyUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${targetKey}`);
-      const copyResponse = await signedFetch(copyUrl, {
-        method: 'PUT',
-        headers: {
-          'x-amz-copy-source': encodeCopySource(R2_BUCKET_NAME, sourceKey),
-          'x-amz-acl': 'private'
-        }
-      });
-
-      if (!copyResponse.ok) {
-        throw new Error(`Failed to copy object during folder rename: ${copyResponse.status} ${copyResponse.statusText}`);
-      }
-
-      toDelete.push(sourceKey);
-    }
-
-    const isTruncated = readTextNode(parsed.IsTruncated) === 'true';
-    continuationToken = isTruncated ? readTextNode(parsed.NextContinuationToken) || undefined : undefined;
-  } while (continuationToken);
-
-  while (toDelete.length > 0) {
-    const batch = toDelete.splice(0, 1000);
-    const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}?delete`);
-    const deleteBody = `<Delete>${batch
-      .map((key) => `<Object><Key>${escapeXml(key)}</Key></Object>`)
-      .join('')}</Delete>`;
-
-    const deleteResponse = await signedFetch(deleteUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/xml'
-      },
-      body: deleteBody
-    });
-
-    if (!deleteResponse.ok) {
-      throw new Error(`Failed to delete old folder objects: ${deleteResponse.status} ${deleteResponse.statusText}`);
-    }
+  for (const sourceKey of keys) {
+    const targetKey = sourceKey.replace(sourcePrefix, targetPrefix);
+    await copyObjectWithinBucket(sourceKey, targetKey);
   }
+
+  await deleteObjects(keys);
 
   return { key: newFolderPath, name: newFolderPath.split('/').pop() || newFolderPath } satisfies FolderItem;
 }
 
 export async function deleteFile(key: string) {
-  const { R2_BUCKET_NAME } = getEnv();
   const normalizedKey = normalizePath(key);
-  const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${normalizedKey}`);
+  const deleteUrl = buildEndpointPath(`/${env.R2_BUCKET_NAME}/${normalizedKey}`);
   const deleteResponse = await signedFetch(deleteUrl, { method: 'DELETE' });
 
   if (!deleteResponse.ok && deleteResponse.status !== 404) {
@@ -389,62 +404,16 @@ export async function deleteFile(key: string) {
 }
 
 export async function deleteFolder(prefix: string) {
-  const { R2_BUCKET_NAME } = getEnv();
   const normalizedPrefix = sanitizePath(prefix);
   const targetPrefix = buildFolderKey(normalizedPrefix);
 
-  let continuationToken: string | undefined;
-  const toDelete: string[] = [];
+  const keys = await collectKeys(targetPrefix);
+  if (keys.length === 0) return;
 
-  do {
-    const listUrl = new URL(buildEndpointPath(`/${R2_BUCKET_NAME}`));
-    listUrl.searchParams.set('list-type', '2');
-    listUrl.searchParams.set('prefix', targetPrefix);
-    if (continuationToken) {
-      listUrl.searchParams.set('continuation-token', continuationToken);
-    }
-
-    const listResponse = await signedFetch(listUrl.toString());
-    if (!listResponse.ok) {
-      throw new Error(`Failed to list folder for delete: ${listResponse.status} ${listResponse.statusText}`);
-    }
-
-    const xml = await listResponse.text();
-    const parsed = xmlParser.parse(xml).ListBucketResult;
-
-    for (const item of ensureArray(parsed.Contents)) {
-      const targetKey = readTextNode(item.Key);
-      if (!targetKey) continue;
-      toDelete.push(targetKey);
-    }
-
-    const isTruncated = readTextNode(parsed.IsTruncated) === 'true';
-    continuationToken = isTruncated ? readTextNode(parsed.NextContinuationToken) || undefined : undefined;
-  } while (continuationToken);
-
-  while (toDelete.length > 0) {
-    const batch = toDelete.splice(0, 1000);
-    const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}?delete`);
-    const deleteBody = `<Delete>${batch
-      .map((key) => `<Object><Key>${escapeXml(key)}</Key></Object>`)
-      .join('')}</Delete>`;
-
-    const deleteResponse = await signedFetch(deleteUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/xml'
-      },
-      body: deleteBody
-    });
-
-    if (!deleteResponse.ok) {
-      throw new Error(`Failed to delete folder objects: ${deleteResponse.status} ${deleteResponse.statusText}`);
-    }
-  }
+  await deleteObjects(keys);
 }
 
 export async function moveFile(key: string, targetPrefix: string) {
-  const { R2_BUCKET_NAME, R2_PUBLIC_BASE } = getEnv();
   const normalizedKey = normalizePath(key);
   const filename = normalizedKey.split('/').pop();
   if (!filename) throw new Error('Invalid file name');
@@ -452,30 +421,18 @@ export async function moveFile(key: string, targetPrefix: string) {
   const safeTargetPrefix = sanitizePath(targetPrefix);
   const newKey = safeTargetPrefix ? `${safeTargetPrefix}/${filename}` : filename;
 
-  const copyUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${newKey}`);
-  const copyResponse = await signedFetch(copyUrl, {
-    method: 'PUT',
-    headers: {
-      'x-amz-copy-source': encodeCopySource(R2_BUCKET_NAME, normalizedKey),
-      'x-amz-acl': 'private'
-    }
-  });
+  await copyObjectWithinBucket(normalizedKey, newKey);
 
-  if (!copyResponse.ok) {
-    throw new Error(`Failed to move file: ${copyResponse.status} ${copyResponse.statusText}`);
-  }
-
-  const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${normalizedKey}`);
+  const deleteUrl = buildEndpointPath(`/${env.R2_BUCKET_NAME}/${normalizedKey}`);
   const deleteResponse = await signedFetch(deleteUrl, { method: 'DELETE' });
   if (!deleteResponse.ok && deleteResponse.status !== 404) {
     throw new Error(`Failed to delete old file after move: ${deleteResponse.status} ${deleteResponse.statusText}`);
   }
 
-  return { key: newKey, url: encodeKeyForUrl(newKey, R2_PUBLIC_BASE), type: inferType(newKey) } satisfies MediaFile;
+  return { key: newKey, url: encodeKeyForUrl(newKey, env.R2_PUBLIC_BASE), type: inferType(newKey) } satisfies MediaFile;
 }
 
 export async function moveFolder(key: string, targetPrefix: string) {
-  const { R2_BUCKET_NAME } = getEnv();
   const normalizedKey = normalizePath(key);
   const folderName = normalizedKey.split('/').pop();
   if (!folderName) throw new Error('Invalid folder');
@@ -486,69 +443,14 @@ export async function moveFolder(key: string, targetPrefix: string) {
   const sourcePrefix = buildFolderKey(normalizedKey);
   const targetPrefixKey = buildFolderKey(targetFolderPath);
 
-  let continuationToken: string | undefined;
-  const toDelete: string[] = [];
+  const keys = await collectKeys(normalizedKey);
 
-  do {
-    const listUrl = new URL(buildEndpointPath(`/${R2_BUCKET_NAME}`));
-    listUrl.searchParams.set('list-type', '2');
-    listUrl.searchParams.set('prefix', sourcePrefix);
-    if (continuationToken) {
-      listUrl.searchParams.set('continuation-token', continuationToken);
-    }
-
-    const listResponse = await signedFetch(listUrl.toString());
-    if (!listResponse.ok) {
-      throw new Error(`Failed to list folder for move: ${listResponse.status} ${listResponse.statusText}`);
-    }
-
-    const xml = await listResponse.text();
-    const parsed = xmlParser.parse(xml).ListBucketResult;
-
-    for (const item of ensureArray(parsed.Contents)) {
-      const sourceKey = readTextNode(item.Key);
-      if (!sourceKey) continue;
-      const targetKey = sourceKey.replace(sourcePrefix, targetPrefixKey);
-
-      const copyUrl = buildEndpointPath(`/${R2_BUCKET_NAME}/${targetKey}`);
-      const copyResponse = await signedFetch(copyUrl, {
-        method: 'PUT',
-        headers: {
-          'x-amz-copy-source': encodeCopySource(R2_BUCKET_NAME, sourceKey),
-          'x-amz-acl': 'private'
-        }
-      });
-
-      if (!copyResponse.ok) {
-        throw new Error(`Failed to copy object during folder move: ${copyResponse.status} ${copyResponse.statusText}`);
-      }
-
-      toDelete.push(sourceKey);
-    }
-
-    const isTruncated = readTextNode(parsed.IsTruncated) === 'true';
-    continuationToken = isTruncated ? readTextNode(parsed.NextContinuationToken) || undefined : undefined;
-  } while (continuationToken);
-
-  while (toDelete.length > 0) {
-    const batch = toDelete.splice(0, 1000);
-    const deleteUrl = buildEndpointPath(`/${R2_BUCKET_NAME}?delete`);
-    const deleteBody = `<Delete>${batch
-      .map((itemKey) => `<Object><Key>${escapeXml(itemKey)}</Key></Object>`)
-      .join('')}</Delete>`;
-
-    const deleteResponse = await signedFetch(deleteUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/xml'
-      },
-      body: deleteBody
-    });
-
-    if (!deleteResponse.ok) {
-      throw new Error(`Failed to delete old folder after move: ${deleteResponse.status} ${deleteResponse.statusText}`);
-    }
+  for (const sourceKey of keys) {
+    const targetKey = sourceKey.replace(sourcePrefix, targetPrefixKey);
+    await copyObjectWithinBucket(sourceKey, targetKey);
   }
+
+  await deleteObjects(keys);
 
   return { key: targetFolderPath, name: targetFolderPath.split('/').pop() || targetFolderPath } satisfies FolderItem;
 }

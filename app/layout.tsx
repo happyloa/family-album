@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: '我們這一家',
-  description: 'A private gallery for the whole family to relive every trip together.'
+  description: '為家人打造的私密相簿，重溫每一趟旅程的回憶。'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -601,7 +601,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           >
             <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
               <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-200">Lightbox 預覽</p>
                 <p className="text-sm font-semibold text-white">{selectedMedia.key.split('/').pop()}</p>
                 {selectedMedia.size && (
                   <p className="text-xs text-slate-400">{(selectedMedia.size / 1024 / 1024).toFixed(2)} MB</p>
@@ -609,7 +608,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
               </div>
               <div className="flex items-center gap-2">
                 <a
-                  className="rounded-full border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100"
+                  className="rounded-full border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100 whitespace-nowrap"
                   href={selectedMedia.url}
                   target="_blank"
                   rel="noreferrer"
@@ -617,7 +616,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                   在新分頁開啟
                 </a>
                 <button
-                  className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300"
+                  className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 whitespace-nowrap"
                   type="button"
                   onClick={() => setSelectedMedia(null)}
                 >
