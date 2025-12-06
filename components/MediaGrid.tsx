@@ -66,16 +66,15 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     }
   }, []);
 
-  const breadcrumb = useMemo(
-    () =>
-      currentPrefix
-        ? currentPrefix.split('/').filter(Boolean).map((part, index, arr) => ({
-            label: part,
-            key: arr.slice(0, index + 1).join('/')
-          }))
-        : [],
-    [currentPrefix]
-  );
+  const breadcrumbTrail = useMemo(() => {
+    const parts = currentPrefix.split('/').filter(Boolean);
+    const nested = parts.map((part, index, arr) => ({
+      label: part,
+      key: arr.slice(0, index + 1).join('/')
+    }));
+
+    return [{ label: '根目錄', key: '' }, ...nested];
+  }, [currentPrefix]);
 
   const filteredFiles = useMemo(
     () => (filter === 'all' ? files : files.filter((file) => file.type === filter)),
@@ -447,68 +446,108 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         )}
       </div>
 
+      <nav
+        aria-label="路徑導覽"
+        className="rounded-3xl border border-slate-800 bg-slate-900/70 px-5 py-4 text-sm text-slate-100 shadow-2xl ring-1 ring-white/5"
+      >
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 text-xl">
+              🧭
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+                <span className="rounded-full bg-slate-800 px-3 py-1">路徑導覽</span>
+                <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-200 ring-1 ring-emerald-500/30">
+                  {folders.length} 資料夾 · {files.length} 媒體
+                </span>
+              </div>
+              <ol className="flex flex-wrap items-center gap-2 text-sm font-semibold" aria-label="Breadcrumb">
+                {breadcrumbTrail.map((crumb, index) => {
+                  const isLast = index === breadcrumbTrail.length - 1;
+                  return (
+                    <li key={crumb.key} className="flex items-center gap-2">
+                      <button
+                        className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 transition ${
+                          isLast
+                            ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-50 shadow-glow'
+                            : 'border-slate-700 bg-slate-900/60 text-slate-100 hover:border-emerald-300 hover:text-emerald-100'
+                        }`}
+                        onClick={() => setCurrentPrefix(crumb.key)}
+                        type="button"
+                        disabled={isLast && currentPrefix === crumb.key}
+                      >
+                        {index === 0 ? '🏠' : '📁'}
+                        <span className="max-w-[140px] truncate text-left">{crumb.label || '根目錄'}</span>
+                      </button>
+                      {index < breadcrumbTrail.length - 1 && <span aria-hidden className="text-slate-500">/</span>}
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
+            <button
+              className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleBack}
+              disabled={!currentPrefix}
+              type="button"
+            >
+              ← 返回上一層
+            </button>
+            <button
+              className="rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
+              onClick={() => loadMedia(currentPrefix)}
+              disabled={loading}
+              type="button"
+            >
+              {loading ? '載入中…' : '重新整理列表'}
+            </button>
+          </div>
+        </div>
+      </nav>
+
       {loading && (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-200">正在載入媒體…</div>
       )}
       {!loading && !hasItems && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-4 text-center text-sm text-slate-200">
-          目前還沒有任何媒體，先上傳一張照片或影片吧！
-        </div>
-      )}
-
-      <nav
-        aria-label="路徑導覽"
-        className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm text-slate-100 shadow-lg md:flex-row md:items-center"
-      >
-        <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
-          <span className="rounded-full bg-slate-800 px-3 py-1">目前路徑</span>
-          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-200">📁 {folders.length} · 🖼️ {files.length}</span>
-        </div>
-        <ol className="flex flex-wrap items-center gap-2" aria-label="Breadcrumb">
-          <li>
+        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-slate-700 bg-slate-900/80 p-8 text-center text-slate-200 shadow-2xl ring-1 ring-white/5">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-emerald-500/10 blur-xl" aria-hidden />
+            <div className="relative flex h-28 w-28 items-center justify-center rounded-2xl border border-dashed border-emerald-400/50 bg-slate-900/80 text-4xl">
+              ☁️
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-xl font-semibold text-white">這個資料夾是空的</h3>
+            <p className="max-w-2xl text-sm leading-relaxed text-slate-300">
+              就像雲端硬碟一樣，拖曳媒體到上方上傳區，或建立資料夾來整理檔案。支援圖片與影片。
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <button
-              className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100"
-              onClick={() => setCurrentPrefix('')}
+              className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => loadMedia(currentPrefix)}
+              disabled={loading}
               type="button"
             >
-              根目錄
+              重新整理
             </button>
-          </li>
-          {breadcrumb.map((crumb, index) => (
-            <li key={crumb.key} className="flex items-center gap-2">
-              <span aria-hidden className="text-slate-500">›</span>
+            {currentPrefix && (
               <button
-                className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100"
-                onClick={() => setCurrentPrefix(crumb.key)}
+                className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800"
+                onClick={handleBack}
                 type="button"
               >
-                <span className="rounded bg-slate-800 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-300">
-                  {index + 1}
-                </span>
-                {crumb.label}
+                回到上一層
               </button>
-            </li>
-          ))}
-        </ol>
-        <div className="flex flex-wrap items-center gap-2 md:ml-auto">
-          <button
-            className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={handleBack}
-            disabled={!currentPrefix}
-            type="button"
-          >
-            ← 返回上一層
-          </button>
-          <button
-            className="rounded-lg bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
-            onClick={() => loadMedia(currentPrefix)}
-            disabled={loading}
-            type="button"
-          >
-            {loading ? '載入中…' : '重新整理列表'}
-          </button>
+            )}
+          </div>
+          <p className="text-xs text-slate-500">提示：管理模式開啟後即可直接上傳或建立子資料夾。</p>
         </div>
-      </nav>
+      )}
 
       {folders.length > 0 && (
         <div className="space-y-3">
