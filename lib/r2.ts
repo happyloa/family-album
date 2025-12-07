@@ -353,11 +353,22 @@ export async function createFolder(prefix: string, name: string) {
   return { key: folderPath, name: normalizedName } satisfies FolderItem;
 }
 
+function extractExtension(name: string) {
+  const lastDot = name.lastIndexOf('.');
+  return lastDot >= 0 ? name.slice(lastDot) : '';
+}
+
 export async function renameFile(key: string, newName: string) {
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
   const parent = parts.slice(0, -1).join('/');
-  const newKey = parent ? `${sanitizePath(parent)}/${sanitizeSegment(newName)}` : sanitizeSegment(newName);
+
+  const currentName = parts[parts.length - 1] ?? '';
+  const extension = extractExtension(currentName);
+  const sanitizedNewName = sanitizeSegment(newName);
+  const finalName = sanitizedNewName.includes('.') || !extension ? sanitizedNewName : `${sanitizedNewName}${extension}`;
+
+  const newKey = parent ? `${sanitizePath(parent)}/${finalName}` : finalName;
 
   const sourceKey = buildObjectKey(normalizedKey);
   const targetKey = buildObjectKey(newKey);
