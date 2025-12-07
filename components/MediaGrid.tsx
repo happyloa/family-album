@@ -24,6 +24,7 @@ type MediaResponse = {
 };
 
 export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
+  type MessageTone = 'info' | 'success' | 'error';
   const [adminToken, setAdminToken] = useState('');
   const [adminInput, setAdminInput] = useState('');
   const isAdmin = Boolean(adminToken);
@@ -47,11 +48,17 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [currentPrefix, setCurrentPrefix] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
   const [message, setMessage] = useState('');
+  const [messageTone, setMessageTone] = useState<MessageTone>('info');
   const [selectedMedia, setSelectedMedia] = useState<MediaFile | null>(null);
   const [filter, setFilter] = useState<'all' | 'image' | 'video'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
   const MAX_ADMIN_TOKEN_LENGTH = 15;
+
+  const pushMessage = (text: string, tone: MessageTone = 'info') => {
+    setMessageTone(tone);
+    setMessage(text);
+  };
 
   useEffect(() => {
     if (!message) return;
@@ -64,7 +71,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     if (saved) {
       void validateAndApplyToken(saved, { silent: true });
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- 初次載入時嘗試恢復管理密碼狀態即可
 
   const breadcrumbTrail = useMemo(() => {
     const parts = currentPrefix.split('/').filter(Boolean);
@@ -108,20 +115,38 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
   const loadMedia = async (prefix = currentPrefix) => {
     setLoading(true);
-    const response = await fetch(`/api/media?prefix=${encodeURIComponent(prefix)}`);
-    if (!response.ok) {
-      setMessage('無法載入媒體，請稍後再試。');
-      setLoading(false);
-      return;
-    }
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? window.setTimeout(() => controller.abort(), 10000) : null;
 
-    const data: MediaResponse = await response.json();
-    setFiles(data.files);
-    setFolders(data.folders);
-    setCurrentPrefix(data.prefix);
-    setCurrentPage(1);
-    setMessage('');
-    setLoading(false);
+    try {
+      const response = await fetch(`/api/media?prefix=${encodeURIComponent(prefix)}`, {
+        signal: controller?.signal
+      });
+
+      if (!response.ok) {
+        const message = response.status === 429 ? '請稍後再試，系統暫時忙碌。' : '無法載入媒體，請稍後再試。';
+        pushMessage(message, 'error');
+        return;
+      }
+
+      const data: MediaResponse = await response.json();
+      setFiles(data.files);
+      setFolders(data.folders);
+      setCurrentPrefix(data.prefix);
+      setCurrentPage(1);
+      setMessage('');
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        pushMessage('載入逾時，請再次嘗試或檢查網路。', 'error');
+      } else {
+        pushMessage('載入媒體時發生錯誤，請稍後再試。', 'error');
+      }
+    } finally {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -131,7 +156,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
   const handleEnterFolder = (folderKey: string) => {
     if (getDepth(folderKey) > MAX_FOLDER_DEPTH) {
-      setMessage('資料夾層數最多兩層');
+      pushMessage('資料夾層數最多兩層', 'error');
       return;
     }
 
@@ -151,14 +176,14 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     if (!trimmed) {
       setAdminToken('');
       if (!options?.silent) {
-        setMessage('請輸入管理密碼');
+        pushMessage('請輸入管理密碼', 'error');
       }
       return false;
     }
 
     if (trimmed.length > MAX_ADMIN_TOKEN_LENGTH) {
       if (!options?.silent) {
-        setMessage('管理密碼最多 15 個字');
+        pushMessage('管理密碼最多 15 個字', 'error');
       }
       setAdminToken('');
       localStorage.removeItem('adminToken');
@@ -166,32 +191,39 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     }
 
     if (!options?.silent) {
-      setMessage('正在驗證管理密碼…');
+      pushMessage('正在驗證管理密碼…');
     }
 
-    const response = await fetch('/api/media', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-admin-token': trimmed
-      },
-      body: JSON.stringify({ action: 'validate' })
-    });
+    try {
+      const response = await fetch('/api/media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': trimmed
+        },
+        body: JSON.stringify({ action: 'validate' })
+      });
 
-    if (!response.ok) {
-      localStorage.removeItem('adminToken');
-      setAdminInput('');
+      if (!response.ok) {
+        localStorage.removeItem('adminToken');
+        setAdminInput('');
+        if (!options?.silent) {
+          pushMessage('管理密碼不正確，請再試一次', 'error');
+        }
+        return false;
+      }
+
+      setAdminToken(trimmed);
+      localStorage.setItem('adminToken', trimmed);
+      setAdminInput(trimmed);
+      pushMessage(options?.silent ? '' : '已啟用管理模式', 'success');
+      return true;
+    } catch (error) {
       if (!options?.silent) {
-        setMessage('管理密碼不正確，請再試一次');
+        pushMessage('驗證時出現錯誤，請檢查網路後重試。', 'error');
       }
       return false;
     }
-
-    setAdminToken(trimmed);
-    localStorage.setItem('adminToken', trimmed);
-    setAdminInput(trimmed);
-    setMessage(options?.silent ? '' : '已啟用管理模式');
-    return true;
   };
 
   const handleSaveAdminToken = () => {
@@ -202,7 +234,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     setAdminInput('');
     setAdminToken('');
     localStorage.removeItem('adminToken');
-    setMessage('已退出管理模式');
+    pushMessage('已退出管理模式');
   };
 
   const handleCreateFolder = async () => {
@@ -211,38 +243,48 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     const safeName = sanitizeName(newFolderName);
 
     if (!safeName) {
-      setMessage('請輸入資料夾名稱');
+      pushMessage('請輸入資料夾名稱', 'error');
       return;
     }
 
     if (safeName.length > MAX_FOLDER_NAME_LENGTH) {
-      setMessage('資料夾名稱最多 30 個字');
+      pushMessage('資料夾名稱最多 30 個字', 'error');
       return;
     }
 
     const nextDepth = getDepth(currentPrefix) + 1;
     if (nextDepth > MAX_FOLDER_DEPTH) {
-      setMessage('資料夾層數最多兩層，無法在此建立新資料夾');
+      pushMessage('資料夾層數最多兩層，無法在此建立新資料夾', 'error');
       return;
     }
 
-    const response = await authorizedFetch('/api/media', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'create-folder', name: safeName, prefix: currentPrefix })
-    });
+    try {
+      const response = await authorizedFetch('/api/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create-folder', name: safeName, prefix: currentPrefix })
+      });
 
-    if (!response.ok) {
-      setMessage('建立資料夾失敗');
-      return;
+      if (!response.ok) {
+        pushMessage('建立資料夾失敗', 'error');
+        return;
+      }
+
+      setNewFolderName('');
+      pushMessage('已建立新資料夾', 'success');
+      await loadMedia(currentPrefix);
+    } catch (error) {
+      pushMessage('建立資料夾時發生錯誤，請稍後再試。', 'error');
     }
-
-    setNewFolderName('');
-    setMessage('');
-    await loadMedia(currentPrefix);
   };
 
   const hasItems = files.length > 0 || folders.length > 0;
+
+  const messageToneStyles: Record<MessageTone, string> = {
+    info: 'border-cyan-400/40 bg-slate-950/90 text-cyan-50 shadow-lg shadow-cyan-500/15',
+    success: 'border-emerald-400/50 bg-emerald-950/70 text-emerald-50 shadow-lg shadow-emerald-500/25',
+    error: 'border-rose-400/50 bg-rose-950/70 text-rose-50 shadow-lg shadow-rose-500/25'
+  };
 
   const promptRename = async (key: string, isFolder: boolean) => {
     if (!isAdmin) return;
@@ -259,23 +301,27 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     if (!sanitizedInput || sanitizedInput === baseName) return;
 
     if (isFolder && newName.length > MAX_FOLDER_NAME_LENGTH) {
-      setMessage('資料夾名稱最多 30 個字');
+      pushMessage('資料夾名稱最多 30 個字', 'error');
       return;
     }
 
-    const response = await authorizedFetch('/api/media', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'rename', key, newName, isFolder })
-    });
+    try {
+      const response = await authorizedFetch('/api/media', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'rename', key, newName, isFolder })
+      });
 
-    if (!response.ok) {
-      setMessage('重新命名失敗，請稍後再試');
-      return;
+      if (!response.ok) {
+        pushMessage('重新命名失敗，請稍後再試', 'error');
+        return;
+      }
+
+      pushMessage('已更新名稱', 'success');
+      await loadMedia(currentPrefix);
+    } catch (error) {
+      pushMessage('重新命名時發生錯誤，請稍後再試。', 'error');
     }
-
-    setMessage('');
-    await loadMedia(currentPrefix);
   };
 
   const handleMove = async (key: string, isFolder: boolean) => {
@@ -287,28 +333,32 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     const targetPrefix = sanitizePath(rawInput.trim());
 
     if (getDepth(targetPrefix) > MAX_FOLDER_DEPTH) {
-      setMessage('資料夾層數最多兩層，請選擇較淺的目標路徑');
+      pushMessage('資料夾層數最多兩層，請選擇較淺的目標路徑', 'error');
       return;
     }
 
     if (isFolder && getDepth(targetPrefix) + 1 > MAX_FOLDER_DEPTH) {
-      setMessage('移動後會超過資料夾層數上限（2 層）');
+      pushMessage('移動後會超過資料夾層數上限（2 層）', 'error');
       return;
     }
 
-    const response = await authorizedFetch('/api/media', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'move', key, targetPrefix, isFolder })
-    });
+    try {
+      const response = await authorizedFetch('/api/media', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'move', key, targetPrefix, isFolder })
+      });
 
-    if (!response.ok) {
-      setMessage('移動失敗，請稍後再試');
-      return;
+      if (!response.ok) {
+        pushMessage('移動失敗，請稍後再試', 'error');
+        return;
+      }
+
+      pushMessage('已移動完成', 'success');
+      await loadMedia(targetPrefix || currentPrefix);
+    } catch (error) {
+      pushMessage('移動時發生錯誤，請稍後再試。', 'error');
     }
-
-    setMessage('');
-    await loadMedia(targetPrefix || currentPrefix);
   };
 
   const handleDelete = async (key: string, isFolder: boolean) => {
@@ -317,32 +367,41 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     const confirmed = window.confirm(`確定要刪除${isFolder ? '資料夾與其內容' : '檔案'}嗎？`);
     if (!confirmed) return;
 
-    const response = await authorizedFetch('/api/media', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', key, isFolder })
-    });
+    try {
+      const response = await authorizedFetch('/api/media', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', key, isFolder })
+      });
 
-    if (!response.ok) {
-      setMessage('刪除失敗，請稍後再試');
-      return;
+      if (!response.ok) {
+        pushMessage('刪除失敗，請稍後再試', 'error');
+        return;
+      }
+
+      pushMessage('已刪除', 'success');
+      await loadMedia(currentPrefix);
+    } catch (error) {
+      pushMessage('刪除時發生錯誤，請稍後再試。', 'error');
     }
-
-    setMessage('');
-    await loadMedia(currentPrefix);
   };
 
   return (
     <section className="relative space-y-5">
       {message && (
         <div className="pointer-events-none fixed right-4 top-4 z-50 flex flex-col gap-3 sm:right-6 sm:top-6">
-          <div className="pointer-events-auto w-72 rounded-2xl border border-amber-500/40 bg-slate-950/90 px-4 py-3 text-sm font-semibold text-amber-50 shadow-lg shadow-amber-500/20">
-            {message}
+          <div
+            className={`pointer-events-auto w-72 rounded-2xl px-4 py-3 text-sm font-semibold ${messageToneStyles[messageTone]}`}
+            role="status"
+            aria-live="assertive"
+          >
+            <span className="block text-xs uppercase tracking-[0.12em] text-slate-300">即時提醒</span>
+            <span className="block text-base leading-relaxed text-white">{message}</span>
           </div>
         </div>
       )}
 
-      <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 shadow-2xl ring-1 ring-white/5 sm:p-8">
+      <div className="glass-card rounded-3xl border border-slate-800/80 bg-slate-900/80 p-6 shadow-2xl ring-1 ring-white/10 sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <p className="text-sm font-semibold text-emerald-300">家庭相簿 · R2 即時同步</p>
@@ -354,7 +413,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/80 p-5 shadow-lg backdrop-blur">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">目前路徑</p>
@@ -367,7 +426,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/80 p-5 shadow-lg backdrop-blur">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">安全管理</p>
@@ -455,7 +514,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
       <nav
         aria-label="路徑導覽"
-        className="rounded-3xl border border-slate-800 bg-slate-900/70 px-5 py-4 text-sm text-slate-100 shadow-2xl ring-1 ring-white/5"
+        className="glass-card rounded-3xl border border-slate-800/80 bg-slate-900/70 px-5 py-4 text-sm text-slate-100 shadow-2xl ring-1 ring-white/10"
       >
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-3">
