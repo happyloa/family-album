@@ -14,11 +14,20 @@ export function UploadForm({
   // 使用陣列保存檔案，方便一次上傳多個媒體
   const [files, setFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<string>('');
+  const [statusTone, setStatusTone] = useState<'info' | 'success' | 'error'>('info');
   const [loading, setLoading] = useState(false);
   const [path, setPath] = useState(currentPath);
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const resetFeedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const MAX_TOTAL_SIZE_MB = 400;
+  const MAX_SINGLE_SIZE_MB = 200;
+
+  const updateStatus = (text: string, tone: 'info' | 'success' | 'error' = 'info') => {
+    setStatus(text);
+    setStatusTone(tone);
+  };
 
   useEffect(() => {
     setPath(currentPath);
@@ -34,30 +43,35 @@ export function UploadForm({
 
   // 針對圖片使用 canvas 降解析度後輸出，降低檔案大小
   const compressImage = async (file: File) => {
-    const image = await createImageBitmap(file);
+    try {
+      const image = await createImageBitmap(file);
 
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    if (!context) return file;
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) return file;
 
-    const maxWidth = 1920;
-    const maxHeight = 1920;
-    const ratio = Math.min(1, maxWidth / image.width, maxHeight / image.height);
-    const targetWidth = Math.round(image.width * ratio);
-    const targetHeight = Math.round(image.height * ratio);
+      const maxWidth = 1920;
+      const maxHeight = 1920;
+      const ratio = Math.min(1, maxWidth / image.width, maxHeight / image.height);
+      const targetWidth = Math.round(image.width * ratio);
+      const targetHeight = Math.round(image.height * ratio);
 
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-    context.drawImage(image, 0, 0, targetWidth, targetHeight);
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      context.drawImage(image, 0, 0, targetWidth, targetHeight);
 
-    const blob: Blob | null = await new Promise((resolve) =>
-      canvas.toBlob((result) => resolve(result), 'image/webp', 0.82)
-    );
+      const blob: Blob | null = await new Promise((resolve) =>
+        canvas.toBlob((result) => resolve(result), 'image/webp', 0.82)
+      );
 
-    if (!blob) return file;
+      if (!blob) return file;
 
-    const compressedName = file.name.replace(/\.[^.]+$/, '.webp');
-    return new File([blob], compressedName, { type: 'image/webp' });
+      const compressedName = file.name.replace(/\.[^.]+$/, '.webp');
+      return new File([blob], compressedName, { type: 'image/webp' });
+    } catch (error) {
+      updateStatus('圖片壓縮失敗，已改用原始檔案。', 'error');
+      return file;
+    }
   };
 
   // 根據媒體型態決定處理方式：圖片壓縮，影片維持原始品質
@@ -68,77 +82,106 @@ export function UploadForm({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!files.length) return;
+    if (!files.length) {
+      updateStatus('請先選擇要上傳的檔案', 'error');
+      return;
+    }
+
+    const totalSizeBytes = files.reduce((sum, file) => sum + file.size, 0);
+    const oversized = files.filter((file) => file.size > MAX_SINGLE_SIZE_MB * 1024 * 1024);
+    if (oversized.length > 0) {
+      updateStatus(`有 ${oversized.length} 個檔案超過 ${MAX_SINGLE_SIZE_MB}MB，請調整後再上傳。`, 'error');
+      return;
+    }
+
+    if (totalSizeBytes > MAX_TOTAL_SIZE_MB * 1024 * 1024) {
+      updateStatus(`總容量超過 ${MAX_TOTAL_SIZE_MB}MB，請分批上傳。`, 'error');
+      return;
+    }
+
+    if (typeof navigator !== 'undefined' && navigator && !navigator.onLine) {
+      updateStatus('目前處於離線狀態，請恢復網路後再試。', 'error');
+      return;
+    }
+
     setLoading(true);
     setProgress(0);
-    setStatus('壓縮與上傳中...');
+    updateStatus('壓縮與上傳中...', 'info');
 
     const compressedFiles: File[] = [];
 
-    for (const file of files) {
-      const compressed = await compressMedia(file);
-      compressedFiles.push(compressed);
-    }
-
-    const formData = new FormData();
-    compressedFiles.forEach((mediaFile) => formData.append('files', mediaFile));
-    formData.append('path', path);
-
-    const response = await new Promise<Response>((resolve, reject) => {
-      const request = new XMLHttpRequest();
-      request.open('POST', '/api/upload');
-
-      if (adminToken) {
-        request.setRequestHeader('x-admin-token', adminToken);
+    try {
+      for (const file of files) {
+        const compressed = await compressMedia(file);
+        compressedFiles.push(compressed);
       }
 
-      request.upload.onprogress = (event) => {
-        if (!event.lengthComputable) {
-          setStatus('上傳中...');
-          return;
+      const safePath = path.trim().replace(/^\/+|\/+$/g, '');
+      const formData = new FormData();
+      compressedFiles.forEach((mediaFile) => formData.append('files', mediaFile));
+      formData.append('path', safePath);
+
+      const response = await new Promise<Response>((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open('POST', '/api/upload');
+
+        if (adminToken) {
+          request.setRequestHeader('x-admin-token', adminToken);
         }
 
-        const percent = Math.round((event.loaded / event.total) * 100);
-        setProgress(percent);
-        setStatus(`上傳中... ${percent}%`);
-      };
+        request.upload.onprogress = (event) => {
+          if (!event.lengthComputable) {
+            updateStatus('上傳中...', 'info');
+            return;
+          }
 
-      request.onload = () => {
-        resolve(new Response(request.response, { status: request.status, statusText: request.statusText }));
-      };
+          const percent = Math.round((event.loaded / event.total) * 100);
+          setProgress(percent);
+          updateStatus(`上傳中... ${percent}%`, 'info');
+        };
 
-      request.onerror = () => {
-        reject(new Error('上傳時發生錯誤'));
-      };
+        request.onload = () => {
+          resolve(new Response(request.response, { status: request.status, statusText: request.statusText }));
+        };
 
-      request.onabort = () => {
-        reject(new Error('上傳已被中止'));
-      };
+        request.onerror = () => {
+          reject(new Error('上傳時發生錯誤'));
+        };
 
-      request.send(formData);
-    });
+        request.onabort = () => {
+          reject(new Error('上傳已被中止'));
+        };
 
-    if (!response.ok) {
-      setStatus('上傳失敗，請稍後再試。');
-      setProgress(0);
-    } else {
-      setStatus('完成！');
-      setProgress(100);
-      setFiles([]);
-      setPath(currentPath);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      onUploaded?.();
-      if (resetFeedbackTimeout.current) {
-        clearTimeout(resetFeedbackTimeout.current);
-      }
-      resetFeedbackTimeout.current = setTimeout(() => {
+        request.send(formData);
+      });
+
+      if (!response.ok) {
+        updateStatus('上傳失敗，請稍後再試。', 'error');
         setProgress(0);
-        setStatus('');
-      }, 5000);
+      } else {
+        updateStatus('完成！', 'success');
+        setProgress(100);
+        setFiles([]);
+        setPath(currentPath);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        onUploaded?.();
+        if (resetFeedbackTimeout.current) {
+          clearTimeout(resetFeedbackTimeout.current);
+        }
+        resetFeedbackTimeout.current = setTimeout(() => {
+          setProgress(0);
+          setStatus('');
+          setStatusTone('info');
+        }, 5000);
+      }
+    } catch (error) {
+      updateStatus('上傳時發生錯誤，請稍後再試。', 'error');
+      setProgress(0);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -160,16 +203,25 @@ export function UploadForm({
           multiple
           ref={fileInputRef}
           onChange={(event) => {
-            const selected = Array.from(event.target.files ?? []).filter((media) =>
-              media.type.startsWith('image/') || media.type.startsWith('video/')
-            );
-            // 只接受圖片與影片，並以繁體提示
-            setStatus(
-              selected.length !== (event.target.files?.length ?? 0)
-                ? '已略過不符合格式的檔案'
-                : ''
-            );
-            setFiles(selected);
+            const rawFiles = Array.from(event.target.files ?? []);
+            const selected = rawFiles.filter((media) => media.type.startsWith('image/') || media.type.startsWith('video/'));
+            const skippedByType = rawFiles.length - selected.length;
+            const oversized = selected.filter((file) => file.size > MAX_SINGLE_SIZE_MB * 1024 * 1024);
+            const valid = selected.filter((file) => file.size <= MAX_SINGLE_SIZE_MB * 1024 * 1024);
+            const totalSizeBytes = valid.reduce((sum, file) => sum + file.size, 0);
+
+            if (totalSizeBytes > MAX_TOTAL_SIZE_MB * 1024 * 1024) {
+              updateStatus(`總容量超過 ${MAX_TOTAL_SIZE_MB}MB，請分批上傳。`, 'error');
+              setFiles([]);
+              return;
+            }
+
+            const hints: string[] = [];
+            if (skippedByType > 0) hints.push(`已略過 ${skippedByType} 個不符合格式的檔案`);
+            if (oversized.length > 0) hints.push(`${oversized.length} 個超過 ${MAX_SINGLE_SIZE_MB}MB 已跳過`);
+
+            updateStatus(hints.join('；'), oversized.length > 0 ? 'error' : 'info');
+            setFiles(valid);
           }}
         />
         {files.length > 0 && (
@@ -215,7 +267,20 @@ export function UploadForm({
             </div>
           </div>
         )}
-        {status && <p className="text-sm font-semibold text-emerald-200">{status}</p>}
+        {status && (
+          <p
+            className={`text-sm font-semibold ${
+              statusTone === 'success'
+                ? 'text-emerald-200'
+                : statusTone === 'error'
+                  ? 'text-rose-200'
+                  : 'text-cyan-200'
+            }`}
+            aria-live="polite"
+          >
+            {status}
+          </p>
+        )}
       </div>
     </form>
   );
