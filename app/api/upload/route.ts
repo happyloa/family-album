@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { uploadToR2 } from '@/lib/r2';
 
+// 使用 Edge Runtime 以符合 Cloudflare Pages 的執行環境。
 export const runtime = 'edge';
 
 function ensureAdmin(request: Request) {
