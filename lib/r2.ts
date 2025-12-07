@@ -358,6 +358,11 @@ function extractExtension(name: string) {
   return lastDot >= 0 ? name.slice(lastDot) : '';
 }
 
+function removeTrailingExtension(name: string, extension: string) {
+  if (!extension) return name;
+  return name.toLowerCase().endsWith(extension.toLowerCase()) ? name.slice(0, -extension.length) : name;
+}
+
 export async function renameFile(key: string, newName: string) {
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
@@ -366,7 +371,8 @@ export async function renameFile(key: string, newName: string) {
   const currentName = parts[parts.length - 1] ?? '';
   const extension = extractExtension(currentName);
   const sanitizedNewName = sanitizeSegment(newName);
-  const finalName = sanitizedNewName.includes('.') || !extension ? sanitizedNewName : `${sanitizedNewName}${extension}`;
+  const baseName = removeTrailingExtension(sanitizedNewName, extension);
+  const finalName = extension ? `${baseName}${extension}` : sanitizedNewName;
 
   const newKey = parent ? `${sanitizePath(parent)}/${finalName}` : finalName;
 

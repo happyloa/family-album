@@ -248,8 +248,15 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     if (!isAdmin) return;
 
     const currentName = key.split('/').pop() ?? key;
-    const newName = sanitizeName(window.prompt('輸入新名稱', currentName)?.trim() || '');
-    if (!newName || newName === currentName) return;
+    const extensionIndex = isFolder ? -1 : currentName.lastIndexOf('.');
+    const extension = extensionIndex > -1 ? currentName.slice(extensionIndex) : '';
+    const baseName = extension ? currentName.slice(0, extensionIndex) : currentName;
+
+    const inputName = window.prompt('輸入新名稱', baseName);
+    const sanitizedInput = sanitizeName(inputName?.trim() || '');
+    const newName = extension ? `${sanitizedInput}${extension}` : sanitizedInput;
+
+    if (!sanitizedInput || sanitizedInput === baseName) return;
 
     if (isFolder && newName.length > MAX_FOLDER_NAME_LENGTH) {
       setMessage('資料夾名稱最多 30 個字');
