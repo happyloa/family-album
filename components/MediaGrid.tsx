@@ -420,7 +420,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                 <p className="text-xl font-bold text-white">{currentPrefix || '根目錄'}</p>
                 <p className="text-xs text-slate-400">僅顯示兩層資料夾。善用下方導覽與篩選控制快速跳轉。</p>
               </div>
-              <div className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-500/20">
+              <div className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-500/20 whitespace-nowrap">
                 {folders.length} 資料夾 · {files.length} 媒體
               </div>
             </div>
@@ -438,7 +438,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
                 </p>
               </div>
               <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 whitespace-nowrap ${
                   isAdmin
                     ? 'bg-emerald-500/15 text-emerald-100 ring-emerald-400/40'
                     : 'bg-slate-800 text-slate-200 ring-slate-600'
@@ -527,10 +527,10 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
                 <span className="rounded-full bg-slate-800 px-3 py-1">路徑導覽</span>
-                <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-200 ring-1 ring-emerald-500/30">
+                <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-200 ring-1 ring-emerald-500/30 whitespace-nowrap">
                   {folders.length} 資料夾 · {files.length} 媒體
                 </span>
-                <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300 ring-1 ring-slate-700">
+                <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300 ring-1 ring-slate-700 whitespace-nowrap">
                   深度 {Math.min(getDepth(currentPrefix), MAX_FOLDER_DEPTH)} / {MAX_FOLDER_DEPTH}
                 </span>
               </div>
