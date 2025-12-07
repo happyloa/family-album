@@ -60,90 +60,9 @@ export function UploadForm({
     return new File([blob], compressedName, { type: 'image/webp' });
   };
 
-  // 若瀏覽器支援 MediaRecorder，嘗試以較低位元率重新編碼影片
-  const compressVideo = async (file: File) => {
-    if (typeof MediaRecorder === 'undefined') return file;
-
-    try {
-      const video = document.createElement('video');
-      video.src = URL.createObjectURL(file);
-      video.muted = true;
-      video.playsInline = true;
-
-      await new Promise<void>((resolve, reject) => {
-        video.onloadedmetadata = () => resolve();
-        video.onerror = () => reject(new Error('Failed to load video for compression'));
-      });
-
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
-      if (!context) return file;
-
-      const targetWidth = Math.min(1080, video.videoWidth || 1080);
-      const targetHeight = Math.round((targetWidth / (video.videoWidth || targetWidth)) * (video.videoHeight || targetWidth));
-
-      canvas.width = targetWidth;
-      canvas.height = targetHeight;
-
-      const stream = canvas.captureStream();
-      const recorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9',
-        videoBitsPerSecond: 1_200_000
-      });
-
-      const chunks: BlobPart[] = [];
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunks.push(event.data);
-      };
-
-      // 逐格繪製至 canvas，再交給 MediaRecorder 壓縮
-      const drawFrame = () => {
-        context.drawImage(video, 0, 0, targetWidth, targetHeight);
-        if (!video.paused && !video.ended) {
-          requestAnimationFrame(drawFrame);
-        }
-      };
-
-      const stopped = new Promise<void>((resolve) => {
-        recorder.onstop = () => resolve();
-      });
-
-      const playback = video.play();
-      await playback?.catch(() => undefined);
-
-      if (video.paused) {
-        URL.revokeObjectURL(video.src);
-        return file;
-      }
-
-      recorder.start();
-      drawFrame();
-
-      await new Promise<void>((resolve) => {
-        video.onended = () => {
-          recorder.stop();
-          resolve();
-        };
-      });
-
-      await stopped;
-
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      const compressedName = file.name.replace(/\.[^.]+$/, '.webm');
-
-      URL.revokeObjectURL(video.src);
-
-      return blob.size > 0 ? new File([blob], compressedName, { type: 'video/webm' }) : file;
-    } catch (error) {
-      console.error('Video compression failed', error);
-      return file;
-    }
-  };
-
-  // 根據媒體型態決定壓縮方式
+  // 根據媒體型態決定處理方式：圖片壓縮，影片維持原始品質
   const compressMedia = async (file: File) => {
     if (file.type.startsWith('image/')) return compressImage(file);
-    if (file.type.startsWith('video/')) return compressVideo(file);
     return file;
   };
 
