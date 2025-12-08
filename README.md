@@ -42,7 +42,7 @@
      - `R2_SECRET_ACCESS_KEY`
      - `R2_BUCKET_NAME`
      - `R2_PUBLIC_BASE`
-   - `ADMIN_ACCESS_TOKEN`：自訂管理密碼（長度最多 15 個字），所有寫入 API（上傳、建立、移動、刪除）都必須帶上 `x-admin-token` 標頭，前端可直接輸入並儲存此值。
+     - `ADMIN_ACCESS_TOKEN`（長度最多 15 個字，寫入 API 皆須帶上 `x-admin-token` 標頭）
    - 若透過 Pages Build，確保在「Environment Variables」與「Project settings → Build system → R2 bindings」一致。
 4. **CORS 與檔案型態**：
    - 如果要在瀏覽器直接存取媒體，請在 R2 bucket CORS 規則加入允許 `GET, HEAD, OPTIONS`，並允許 `Content-Type` 標頭。
@@ -57,4 +57,3 @@
 - 預設僅提供瀏覽功能，若要啟用建立、上傳、移動與刪除，請在介面輸入 `ADMIN_ACCESS_TOKEN` 對應的管理密碼即可。
 - 資料夾結構限制為兩層，資料夾名稱最長 30 字，相關驗證已內建於前端操作。
 - 管理密碼欄位限制為 15 個字，輸入更長會被拒絕，請在設定環境變數時一併遵守此長度。
-- 依賴套件經 `npm outdated` 檢查僅剩 Tailwind CSS 4 為重大升級，為避免版型受影響暫維持 3.x；`npm audit` 已通過且無已知漏洞。

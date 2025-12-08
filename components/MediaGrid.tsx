@@ -1,46 +1,42 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
+
 import { UploadForm } from './UploadForm';
+import { AdminAccessPanel } from './media/AdminAccessPanel';
+import { BreadcrumbNav } from './media/BreadcrumbNav';
+import { EmptyState } from './media/EmptyState';
+import { FolderCreator } from './media/FolderCreator';
+import { FolderGrid } from './media/FolderGrid';
+import { MediaPreviewModal } from './media/MediaPreviewModal';
+import { MediaSection } from './media/MediaSection';
+import { MessageToast } from './media/MessageToast';
+import { PathOverview } from './media/PathOverview';
+import { FolderItem, MediaFile, MediaResponse, MessageTone } from './media/types';
 
-type MediaFile = {
-  key: string;
-  url: string;
-  type: 'image' | 'video';
-  size?: number;
-  lastModified?: string;
-};
+const MAX_FOLDER_DEPTH = 2;
+const MAX_FOLDER_NAME_LENGTH = 30;
+const MAX_ADMIN_TOKEN_LENGTH = 15;
+const ITEMS_PER_PAGE = 12;
 
-type FolderItem = {
-  key: string;
-  name: string;
-};
+type FilterOption = 'all' | 'image' | 'video';
 
-type MediaResponse = {
-  prefix: string;
-  folders: FolderItem[];
-  files: MediaFile[];
-};
+type Breadcrumb = { label: string; key: string };
+
+const sanitizeName = (value: string) => value.replace(/[<>:"/\\|?*]+/g, '').trim();
+const sanitizePath = (value: string) =>
+  value
+    .split('/')
+    .map((segment) => sanitizeName(segment))
+    .filter(Boolean)
+    .join('/');
+
+const getDepth = (path: string) => (path ? path.split('/').filter(Boolean).length : 0);
 
 export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
-  type MessageTone = 'info' | 'success' | 'error';
   const [adminToken, setAdminToken] = useState('');
   const [adminInput, setAdminInput] = useState('');
   const isAdmin = Boolean(adminToken);
-
-  const MAX_FOLDER_DEPTH = 2;
-  const MAX_FOLDER_NAME_LENGTH = 30;
-
-  const sanitizeName = (value: string) => value.replace(/[<>:"/\\|?*]+/g, '').trim();
-  const sanitizePath = (value: string) =>
-    value
-      .split('/')
-      .map((segment) => sanitizeName(segment))
-      .filter(Boolean)
-      .join('/');
-
-  const getDepth = (path: string) => (path ? path.split('/').filter(Boolean).length : 0);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [folders, setFolders] = useState<FolderItem[]>([]);
@@ -50,10 +46,8 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [message, setMessage] = useState('');
   const [messageTone, setMessageTone] = useState<MessageTone>('info');
   const [selectedMedia, setSelectedMedia] = useState<MediaFile | null>(null);
-  const [filter, setFilter] = useState<'all' | 'image' | 'video'>('all');
+  const [filter, setFilter] = useState<FilterOption>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
-  const MAX_ADMIN_TOKEN_LENGTH = 15;
 
   const pushMessage = (text: string, tone: MessageTone = 'info') => {
     setMessageTone(tone);
@@ -73,13 +67,9 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- 初次載入時嘗試恢復管理密碼狀態即可
 
-  const breadcrumbTrail = useMemo(() => {
+  const breadcrumbTrail: Breadcrumb[] = useMemo(() => {
     const parts = currentPrefix.split('/').filter(Boolean);
-    const nested = parts.map((part, index, arr) => ({
-      label: part,
-      key: arr.slice(0, index + 1).join('/')
-    }));
-
+    const nested = parts.map((part, index, arr) => ({ label: part, key: arr.slice(0, index + 1).join('/') }));
     return [{ label: '根目錄', key: '' }, ...nested];
   }, [currentPrefix]);
 
@@ -88,11 +78,11 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     [files, filter]
   );
 
-  const totalPages = Math.max(1, Math.ceil(filteredFiles.length / itemsPerPage));
+  const totalPages = Math.max(1, Math.ceil(filteredFiles.length / ITEMS_PER_PAGE));
   const paginatedFiles = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredFiles.slice(start, start + itemsPerPage);
-  }, [currentPage, filteredFiles, itemsPerPage]);
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredFiles.slice(start, start + ITEMS_PER_PAGE);
+  }, [currentPage, filteredFiles]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -119,13 +109,11 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     const timeoutId = controller ? window.setTimeout(() => controller.abort(), 10000) : null;
 
     try {
-      const response = await fetch(`/api/media?prefix=${encodeURIComponent(prefix)}`, {
-        signal: controller?.signal
-      });
+      const response = await fetch(`/api/media?prefix=${encodeURIComponent(prefix)}`, { signal: controller?.signal });
 
       if (!response.ok) {
-        const message = response.status === 429 ? '請稍後再試，系統暫時忙碌。' : '無法載入媒體，請稍後再試。';
-        pushMessage(message, 'error');
+        const content = response.status === 429 ? '請稍後再試，系統暫時忙碌。' : '無法載入媒體，請稍後再試。';
+        pushMessage(content, 'error');
         return;
       }
 
@@ -278,14 +266,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     }
   };
 
-  const hasItems = files.length > 0 || folders.length > 0;
-
-  const messageToneStyles: Record<MessageTone, string> = {
-    info: 'border-cyan-400/40 bg-slate-950/90 text-cyan-50 shadow-lg shadow-cyan-500/15',
-    success: 'border-emerald-400/50 bg-emerald-950/70 text-emerald-50 shadow-lg shadow-emerald-500/25',
-    error: 'border-rose-400/50 bg-rose-950/70 text-rose-50 shadow-lg shadow-rose-500/25'
-  };
-
   const promptRename = async (key: string, isFolder: boolean) => {
     if (!isAdmin) return;
 
@@ -386,20 +366,12 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     }
   };
 
+  const hasItems = files.length > 0 || folders.length > 0;
+  const filterLabel = filter === 'all' ? '全部' : filter === 'image' ? '僅圖片' : '僅影片';
+
   return (
     <section className="relative space-y-5">
-      {message && (
-        <div className="pointer-events-none fixed right-4 top-4 z-50 flex flex-col gap-3 sm:right-6 sm:top-6">
-          <div
-            className={`pointer-events-auto w-72 rounded-2xl px-4 py-3 text-sm font-semibold ${messageToneStyles[messageTone]}`}
-            role="status"
-            aria-live="assertive"
-          >
-            <span className="block text-xs uppercase tracking-[0.12em] text-slate-300">即時提醒</span>
-            <span className="block text-base leading-relaxed text-white">{message}</span>
-          </div>
-        </div>
-      )}
+      <MessageToast message={message} tone={messageTone} />
 
       <div className="glass-card rounded-3xl border border-slate-800/80 bg-slate-900/80 p-6 shadow-2xl ring-1 ring-white/10 sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -413,488 +385,71 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         </div>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/80 p-5 shadow-lg backdrop-blur">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">目前路徑</p>
-                <p className="text-xl font-bold text-white">{currentPrefix || '根目錄'}</p>
-                <p className="text-xs text-slate-400">僅顯示兩層資料夾。善用下方導覽與篩選控制快速跳轉。</p>
-              </div>
-              <div className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-200 ring-1 ring-emerald-500/20 whitespace-nowrap">
-                {folders.length} 資料夾 · {files.length} 媒體
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/80 p-5 shadow-lg backdrop-blur">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">安全管理</p>
-                <h3 className="text-lg font-semibold text-white">
-                  {isAdmin ? '管理模式已啟用，可上傳與編輯' : '輸入管理密碼啟用編輯權限'}
-                </h3>
-                <p className="mt-1 text-xs text-slate-400">
-                  {isAdmin ? '完成操作後請記得關閉管理模式，避免誤刪除或誤上傳。' : '僅需管理者密碼即可啟用上傳、移動與刪除功能。'}
-                </p>
-              </div>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 whitespace-nowrap ${
-                  isAdmin
-                    ? 'bg-emerald-500/15 text-emerald-100 ring-emerald-400/40'
-                    : 'bg-slate-800 text-slate-200 ring-slate-600'
-                }`}
-              >
-                {isAdmin ? '管理模式開啟' : '唯讀模式'}
-              </span>
-            </div>
-            <div className="mt-4 space-y-3">
-              {isAdmin ? (
-                <button
-                  className="inline-flex w-full items-center justify-center rounded-xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white shadow-lg ring-1 ring-rose-300/40 transition hover:bg-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-300/60"
-                  type="button"
-                  onClick={handleClearAdminToken}
-                >
-                  退出管理模式
-                </button>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-                  <input
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-                    type="password"
-                    maxLength={MAX_ADMIN_TOKEN_LENGTH}
-                    value={adminInput}
-                    placeholder="輸入管理密碼以進行上傳與修改"
-                    onChange={(event) => setAdminInput(event.target.value)}
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      className="rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-cyan-300 hover:to-emerald-300"
-                      type="button"
-                      onClick={handleSaveAdminToken}
-                    >
-                      驗證管理密碼
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <PathOverview currentPrefix={currentPrefix} folderCount={folders.length} fileCount={files.length} />
+          <AdminAccessPanel
+            isAdmin={isAdmin}
+            adminInput={adminInput}
+            maxLength={MAX_ADMIN_TOKEN_LENGTH}
+            onValidate={handleSaveAdminToken}
+            onClear={handleClearAdminToken}
+            onInputChange={setAdminInput}
+          />
         </div>
 
         {isAdmin && (
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">建立資料夾</p>
-                  <h3 className="text-lg font-semibold text-white">整理新的分類</h3>
-                  <p className="text-sm text-slate-400">會在 R2 中建立虛擬資料夾，方便依照旅行、年份或活動分類。</p>
-                  <p className="text-xs text-slate-500">資料夾層級最多兩層，名稱最多 30 個字。</p>
-                </div>
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-                <input
-                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
-                  type="text"
-                  value={newFolderName}
-                  placeholder="輸入資料夾名稱（例如：taiwan-trip）"
-                  onChange={(event) => setNewFolderName(sanitizeName(event.target.value))}
-                />
-                <button
-                  className="inline-flex h-full min-h-[52px] items-center justify-center rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
-                  type="button"
-                  onClick={handleCreateFolder}
-                >
-                  建立
-                </button>
-              </div>
-            </div>
-
+            <FolderCreator value={newFolderName} onChange={(value) => setNewFolderName(sanitizeName(value))} onSubmit={handleCreateFolder} />
             <UploadForm adminToken={adminToken} currentPath={currentPrefix} onUploaded={() => loadMedia(currentPrefix)} />
           </div>
         )}
       </div>
 
-      <nav
-        aria-label="路徑導覽"
-        className="glass-card rounded-3xl border border-slate-800/80 bg-slate-900/70 px-5 py-4 text-sm text-slate-100 shadow-2xl ring-1 ring-white/10"
-      >
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
-              <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-200 ring-1 ring-emerald-500/30 whitespace-nowrap">
-                {folders.length} 資料夾 · {files.length} 媒體
-              </span>
-              <span className="rounded-full bg-slate-800 px-3 py-1 text-slate-300 ring-1 ring-slate-700 whitespace-nowrap">
-                深度 {Math.min(getDepth(currentPrefix), MAX_FOLDER_DEPTH)} / {MAX_FOLDER_DEPTH}
-              </span>
-            </div>
-            <div className="overflow-x-auto">
-              <ol className="flex w-full items-center gap-2 text-sm font-semibold" aria-label="Breadcrumb">
-                {breadcrumbTrail.map((crumb, index) => {
-                  const isLast = index === breadcrumbTrail.length - 1;
-                  return (
-                    <li key={crumb.key} className="flex items-center gap-2">
-                      <button
-                        className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 transition focus:outline-none focus:ring-2 focus:ring-emerald-400/50 ${
-                          isLast
-                            ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-50 shadow-glow'
-                            : 'border-slate-700 bg-slate-900/60 text-slate-100 hover:border-emerald-300 hover:text-emerald-100'
-                        }`}
-                        onClick={() => setCurrentPrefix(crumb.key)}
-                        type="button"
-                        disabled={isLast && currentPrefix === crumb.key}
-                        aria-current={isLast ? 'page' : undefined}
-                        title={crumb.label || '根目錄'}
-                      >
-                        <span aria-hidden>{index === 0 ? '🏠' : '📁'}</span>
-                        <span className="max-w-[160px] truncate text-left">{crumb.label || '根目錄'}</span>
-                        {isLast && <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold text-emerald-50">目前</span>}
-                      </button>
-                      {index < breadcrumbTrail.length - 1 && <span aria-hidden className="text-slate-500">›</span>}
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 md:justify-end">
-            <button
-              className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={handleBack}
-              disabled={!currentPrefix}
-              type="button"
-            >
-              ← 返回上一層
-            </button>
-            <button
-              className="rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
-              onClick={() => loadMedia(currentPrefix)}
-              disabled={loading}
-              type="button"
-            >
-              {loading ? '載入中…' : '重新整理列表'}
-            </button>
-          </div>
-        </div>
-      </nav>
+      <BreadcrumbNav
+        breadcrumbTrail={breadcrumbTrail}
+        currentPrefix={currentPrefix}
+        maxDepth={MAX_FOLDER_DEPTH}
+        foldersCount={folders.length}
+        filesCount={files.length}
+        onBack={handleBack}
+        onRefresh={() => loadMedia(currentPrefix)}
+        onNavigate={setCurrentPrefix}
+        loading={loading}
+        filter={filter}
+        onFilterChange={(value) => setFilter(value)}
+        depth={Math.min(getDepth(currentPrefix), MAX_FOLDER_DEPTH)}
+      />
 
       {loading && (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-200">正在載入媒體…</div>
       )}
-      {!loading && !hasItems && (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-slate-700 bg-slate-900/80 p-8 text-center text-slate-200 shadow-2xl ring-1 ring-white/5">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-emerald-500/10 blur-xl" aria-hidden />
-            <div className="relative flex h-28 w-28 items-center justify-center rounded-2xl border border-dashed border-emerald-400/50 bg-slate-900/80 text-4xl">
-              ☁️
-            </div>
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-xl font-semibold text-white">這個資料夾是空的</h3>
-            <p className="max-w-2xl text-sm leading-relaxed text-slate-300">
-              拖曳媒體到上方上傳區，或建立資料夾來整理檔案。支援圖片與影片。
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <button
-              className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={() => loadMedia(currentPrefix)}
-              disabled={loading}
-              type="button"
-            >
-              重新整理
-            </button>
-            {currentPrefix && (
-              <button
-                className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-500 hover:bg-slate-800"
-                onClick={handleBack}
-                type="button"
-              >
-                回到上一層
-              </button>
-            )}
-          </div>
-          <p className="text-xs text-slate-500">提示：管理模式開啟後即可直接上傳或建立子資料夾。</p>
-        </div>
-      )}
 
-      {folders.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-3">
-              <h3 className="text-xl font-semibold text-white">資料夾</h3>
-              <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">
-                點擊可直接進入
-              </span>
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {folders.map((folder) => (
-              <article
-                key={folder.key}
-                className="group relative flex cursor-pointer flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg transition hover:-translate-y-1 hover:border-emerald-400/50 focus-within:-translate-y-1 focus-within:border-emerald-400/50"
-                role="button"
-                tabIndex={0}
-                onClick={() => handleEnterFolder(folder.key)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    handleEnterFolder(folder.key);
-                  }
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-2xl">📂</div>
-                  <div className="space-y-1">
-                    <h4 className="text-lg font-semibold text-white">{folder.name || '未命名'}</h4>
-                    <p className="text-xs text-slate-400">{folder.key || '根目錄'}</p>
-                  </div>
-                </div>
-                {isAdmin && (
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
-                    <button
-                      className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        promptRename(folder.key, true);
-                      }}
-                    >
-                      重新命名
-                    </button>
-                    <button
-                      className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleMove(folder.key, true);
-                      }}
-                    >
-                      移動
-                    </button>
-                    <button
-                      className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40"
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleDelete(folder.key, true);
-                      }}
-                    >
-                      刪除
-                    </button>
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
-        </div>
-      )}
+      {!loading && !hasItems && <EmptyState />}
 
-      {files.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-3">
-              <h3 className="text-xl font-semibold text-white">媒體檔案</h3>
-              <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-200">
-                目前篩選：{filter === 'all' ? '全部' : filter === 'image' ? '僅圖片' : '僅影片'}（共 {filteredFiles.length}）
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {(
-                [
-                  { key: 'all', label: '全部' },
-                  { key: 'image', label: '圖片' },
-                  { key: 'video', label: '影片' }
-                ] as const
-              ).map(({ key, label }) => (
-                <button
-                  key={key}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                    filter === key
-                      ? 'border-emerald-400 bg-emerald-500/15 text-emerald-100 shadow-glow'
-                      : 'border-slate-700 text-slate-100 hover:border-emerald-300 hover:text-emerald-100'
-                  }`}
-                  onClick={() => setFilter(key)}
-                  type="button"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {filteredFiles.length === 0 && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-200">
-              目前篩選條件下沒有媒體，請切換篩選或重新整理。
-            </div>
-          )}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {paginatedFiles.map((item) => (
-              <article key={item.key} className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-lg">
-                <div
-                  className="group relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950/80"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setSelectedMedia(item)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      setSelectedMedia(item);
-                    }
-                  }}
-                >
-                  <div className="relative aspect-[4/3] w-full cursor-zoom-in transition duration-200 group-hover:brightness-110">
-                    {item.type === 'image' ? (
-                      <Image
-                        src={item.url}
-                        alt={item.key}
-                        fill
-                        loading="lazy"
-                        decoding="async"
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <video
-                        className="h-full w-full rounded-xl object-cover"
-                        src={item.url}
-                        preload="metadata"
-                        playsInline
-                        muted
-                        controlsList="nodownload"
-                      />
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-1 px-1 pb-2">
-                  <div className="flex items-center justify-between text-sm text-slate-300">
-                    <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
-                      {item.type === 'image' ? 'Image' : 'Video'}
-                    </span>
-                    {item.size && <span className="text-xs text-slate-400">{(item.size / 1024 / 1024).toFixed(1)} MB</span>}
-                  </div>
-                  <div className="text-base font-semibold text-white">{item.key.split('/').pop()}</div>
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>{item.lastModified ? new Date(item.lastModified).toLocaleString() : ''}</span>
-                    {isAdmin && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <button
-                          className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-emerald-200 transition hover:bg-slate-700 hover:text-emerald-100"
-                          type="button"
-                          onClick={() => promptRename(item.key, false)}
-                        >
-                          重新命名
-                        </button>
-                        <button
-                          className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
-                          type="button"
-                          onClick={() => handleMove(item.key, false)}
-                        >
-                          移動
-                        </button>
-                        <button
-                          className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40"
-                          type="button"
-                          onClick={() => handleDelete(item.key, false)}
-                        >
-                          刪除
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-          {filteredFiles.length > itemsPerPage && (
-            <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-100">
-              <button
-                className="rounded-lg border border-slate-700 px-3 py-1.5 font-semibold transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                type="button"
-                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                disabled={currentPage === 1}
-              >
-                ← 上一頁
-              </button>
-              <span className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
-                第 {currentPage} / {totalPages} 頁
-              </span>
-              <button
-                className="rounded-lg border border-slate-700 px-3 py-1.5 font-semibold transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                type="button"
-                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                disabled={currentPage === totalPages}
-              >
-                下一頁 →
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      <FolderGrid
+        folders={folders}
+        isAdmin={isAdmin}
+        onEnter={handleEnterFolder}
+        onRename={(key) => promptRename(key, true)}
+        onMove={(key) => handleMove(key, true)}
+        onDelete={(key) => handleDelete(key, true)}
+      />
 
-      {selectedMedia && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur"
-          onClick={() => setSelectedMedia(null)}
-          role="presentation"
-        >
-          <div
-            className="relative max-h-[90vh] w-[min(1100px,92vw)] overflow-hidden rounded-3xl border border-slate-700 bg-slate-900/95 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-white">{selectedMedia.key.split('/').pop()}</p>
-                {selectedMedia.size && (
-                  <p className="text-xs text-slate-400">{(selectedMedia.size / 1024 / 1024).toFixed(2)} MB</p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <a
-                  className="rounded-full border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100 whitespace-nowrap"
-                  href={selectedMedia.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  在新分頁開啟
-                </a>
-                <button
-                  className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 whitespace-nowrap"
-                  type="button"
-                  onClick={() => setSelectedMedia(null)}
-                >
-                  關閉
-                </button>
-              </div>
-            </div>
-            <div className="relative flex items-center justify-center bg-slate-950/60 p-4 sm:p-6">
-              <div className="relative aspect-[16/10] w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-800 bg-black">
-                {selectedMedia.type === 'image' ? (
-                  <Image
-                    src={selectedMedia.url}
-                    alt={selectedMedia.key}
-                    fill
-                    loading="lazy"
-                    decoding="async"
-                    className="object-contain"
-                    sizes="100vw"
-                  />
-                ) : (
-                  <video
-                    className="h-full w-full bg-black object-contain"
-                    src={selectedMedia.url}
-                    controls
-                    autoPlay
-                    preload="metadata"
-                    playsInline
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <MediaSection
+        files={filteredFiles}
+        paginatedFiles={paginatedFiles}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        onSelect={setSelectedMedia}
+        onRename={(key) => promptRename(key, false)}
+        onMove={(key) => handleMove(key, false)}
+        onDelete={(key) => handleDelete(key, false)}
+        filterLabel={filterLabel}
+        isAdmin={isAdmin}
+        itemsPerPage={ITEMS_PER_PAGE}
+      />
+
+      <MediaPreviewModal media={selectedMedia} onClose={() => setSelectedMedia(null)} />
     </section>
   );
 }
