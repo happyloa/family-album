@@ -80,6 +80,8 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
+  const depth = Math.min(getDepth(currentPrefix), MAX_FOLDER_DEPTH);
+
   const breadcrumbTrail: Breadcrumb[] = useMemo(() => {
     const parts = currentPrefix.split('/').filter(Boolean);
     const nested = parts.map((part, index, arr) => ({ label: part, key: arr.slice(0, index + 1).join('/') }));
@@ -487,14 +489,14 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         onRefresh={() => loadMedia(currentPrefix)}
         onNavigate={setCurrentPrefix}
         loading={loading}
-        depth={Math.min(getDepth(currentPrefix), MAX_FOLDER_DEPTH)}
+        depth={depth}
       />
 
       {loading && (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-200">正在載入媒體…</div>
       )}
 
-      {!loading && !hasItems && <EmptyState />}
+      {!loading && !hasItems && <EmptyState atMaxDepth={depth >= MAX_FOLDER_DEPTH} />}
 
       <FolderGrid
         folders={folders}
