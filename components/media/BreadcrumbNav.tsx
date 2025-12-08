@@ -61,7 +61,9 @@ export function BreadcrumbNav({
                       <span aria-hidden>{index === 0 ? '🏠' : '📁'}</span>
                       <span className="max-w-[160px] truncate text-left">{crumb.label || '根目錄'}</span>
                       {isLast && (
-                        <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold text-emerald-50">目前</span>
+                        <span className="whitespace-nowrap rounded-full bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold text-emerald-50">
+                          目前
+                        </span>
                       )}
                     </button>
                     {index < breadcrumbTrail.length - 1 && <span aria-hidden className="text-slate-500">›</span>}
