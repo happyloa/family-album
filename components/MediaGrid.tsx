@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { UploadForm } from './UploadForm';
 import { AdminAccessPanel } from './media/AdminAccessPanel';
@@ -18,6 +18,8 @@ const MAX_FOLDER_DEPTH = 2;
 const MAX_FOLDER_NAME_LENGTH = 30;
 const MAX_ADMIN_TOKEN_LENGTH = 15;
 const ITEMS_PER_PAGE = 12;
+const ADMIN_TOKEN_STORAGE_KEY = 'adminToken';
+const ADMIN_SESSION_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 type FilterOption = 'all' | 'image' | 'video';
 
@@ -37,6 +39,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [adminToken, setAdminToken] = useState('');
   const [adminInput, setAdminInput] = useState('');
   const isAdmin = Boolean(adminToken);
+  const adminTimeoutRef = useRef<number | null>(null);
 
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [folders, setFolders] = useState<FolderItem[]>([]);
@@ -62,11 +65,20 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   }, [message]);
 
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('adminToken') : '';
+    const saved = typeof window !== 'undefined' ? sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) : '';
     if (saved) {
       void validateAndApplyToken(saved, { silent: true });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- 初次載入時嘗試恢復管理密碼狀態即可
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   const breadcrumbTrail: Breadcrumb[] = useMemo(() => {
     const parts = currentPrefix.split('/').filter(Boolean);
@@ -184,13 +196,35 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     setCurrentPrefix(parts.join('/'));
   };
 
+  const clearAdminSession = (notice?: string) => {
+    setAdminInput('');
+    setAdminToken('');
+    sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+
+    if (adminTimeoutRef.current) {
+      window.clearTimeout(adminTimeoutRef.current);
+      adminTimeoutRef.current = null;
+    }
+
+    if (notice) {
+      pushMessage(notice, 'info');
+    }
+  };
+
+  const resetAdminTimeout = () => {
+    if (adminTimeoutRef.current) {
+      window.clearTimeout(adminTimeoutRef.current);
+    }
+
+    adminTimeoutRef.current = window.setTimeout(() => {
+      clearAdminSession('管理模式已逾時，請重新輸入。');
+    }, ADMIN_SESSION_DURATION_MS);
+  };
+
   const validateAndApplyToken = async (token: string, options?: { silent?: boolean }) => {
     const trimmed = token.trim();
     if (!trimmed) {
-      setAdminToken('');
-      if (!options?.silent) {
-        pushMessage('請輸入管理密碼', 'error');
-      }
+      clearAdminSession(options?.silent ? undefined : '請輸入管理密碼');
       return false;
     }
 
@@ -198,8 +232,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       if (!options?.silent) {
         pushMessage('管理密碼最多 15 個字', 'error');
       }
-      setAdminToken('');
-      localStorage.removeItem('adminToken');
+      clearAdminSession();
       return false;
     }
 
@@ -218,8 +251,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       });
 
       if (!response.ok) {
-        localStorage.removeItem('adminToken');
-        setAdminInput('');
+        clearAdminSession();
         if (!options?.silent) {
           pushMessage('管理密碼不正確，請再試一次', 'error');
         }
@@ -227,8 +259,9 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       }
 
       setAdminToken(trimmed);
-      localStorage.setItem('adminToken', trimmed);
       setAdminInput(trimmed);
+      sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, trimmed);
+      resetAdminTimeout();
       pushMessage(options?.silent ? '' : '已啟用管理模式', 'success');
       return true;
     } catch (error) {
@@ -244,14 +277,26 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   };
 
   const handleClearAdminToken = () => {
-    setAdminInput('');
-    setAdminToken('');
-    localStorage.removeItem('adminToken');
-    pushMessage('已退出管理模式');
+    clearAdminSession('已退出管理模式');
+  };
+
+  const requestAdminToken = async (promptMessage = '請輸入管理密碼以繼續'): Promise<boolean> => {
+    if (!adminToken) {
+      const input = window.prompt(promptMessage, adminInput);
+      if (input === null) return false;
+
+      setAdminInput(input);
+      const isValid = await validateAndApplyToken(input);
+      if (!isValid) return false;
+    }
+
+    resetAdminTimeout();
+    return true;
   };
 
   const handleCreateFolder = async () => {
-    if (!isAdmin) return;
+    const allowed = await requestAdminToken('請輸入管理密碼以建立資料夾');
+    if (!allowed) return;
 
     const safeName = sanitizeName(newFolderName);
 
@@ -292,7 +337,8 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   };
 
   const promptRename = async (key: string, isFolder: boolean) => {
-    if (!isAdmin) return;
+    const allowed = await requestAdminToken('請輸入管理密碼以重新命名');
+    if (!allowed) return;
 
     const currentName = key.split('/').pop() ?? key;
     const extensionIndex = isFolder ? -1 : currentName.lastIndexOf('.');
@@ -330,7 +376,8 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   };
 
   const handleMove = async (key: string, isFolder: boolean) => {
-    if (!isAdmin) return;
+    const allowed = await requestAdminToken('請輸入管理密碼以移動項目');
+    if (!allowed) return;
 
     const rawInput = window.prompt('輸入目標路徑（例如：albums/2024）', currentPrefix);
     if (rawInput === null) return;
@@ -367,7 +414,8 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   };
 
   const handleDelete = async (key: string, isFolder: boolean) => {
-    if (!isAdmin) return;
+    const allowed = await requestAdminToken('請輸入管理密碼以刪除項目');
+    if (!allowed) return;
 
     const confirmed = window.confirm(`確定要刪除${isFolder ? '資料夾與其內容' : '檔案'}嗎？`);
     if (!confirmed) return;
