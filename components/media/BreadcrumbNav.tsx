@@ -2,8 +2,6 @@
 
 type Breadcrumb = { label: string; key: string };
 
-type FilterOption = 'all' | 'image' | 'video';
-
 export function BreadcrumbNav({
   breadcrumbTrail,
   currentPrefix,
@@ -14,8 +12,6 @@ export function BreadcrumbNav({
   onRefresh,
   onNavigate,
   loading,
-  filter,
-  onFilterChange,
   depth
 }: {
   breadcrumbTrail: Breadcrumb[];
@@ -27,16 +23,8 @@ export function BreadcrumbNav({
   onRefresh: () => void;
   onNavigate: (key: string) => void;
   loading: boolean;
-  filter: FilterOption;
-  onFilterChange: (value: FilterOption) => void;
   depth: number;
 }) {
-  const filters: { key: FilterOption; label: string }[] = [
-    { key: 'all', label: '全部' },
-    { key: 'image', label: '圖片' },
-    { key: 'video', label: '影片' }
-  ];
-
   return (
     <nav
       aria-label="路徑導覽"
@@ -101,22 +89,6 @@ export function BreadcrumbNav({
           >
             {loading ? '載入中…' : '重新整理列表'}
           </button>
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200">
-            {filters.map(({ key, label }) => (
-              <button
-                key={key}
-                className={`rounded-lg border px-3 py-1.5 transition ${
-                  filter === key
-                    ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-50 shadow-glow'
-                    : 'border-slate-700 bg-slate-800 text-slate-100 hover:border-emerald-300 hover:text-emerald-100'
-                }`}
-                type="button"
-                onClick={() => onFilterChange(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </nav>

@@ -8,9 +8,10 @@ export function MediaPreviewModal({ media, onClose }: { media: MediaFile | null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur"
+      className="fixed inset-0 z-50 flex min-h-screen w-screen items-center justify-center overflow-y-auto bg-slate-950/80 p-4 backdrop-blur sm:p-6"
       onClick={onClose}
-      role="presentation"
+      role="dialog"
+      aria-modal="true"
     >
       <div
         className="relative max-h-[90vh] w-[min(1100px,92vw)] overflow-hidden rounded-3xl border border-slate-700 bg-slate-900/95 shadow-2xl"
