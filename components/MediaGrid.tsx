@@ -414,8 +414,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         onRefresh={() => loadMedia(currentPrefix)}
         onNavigate={setCurrentPrefix}
         loading={loading}
-        filter={filter}
-        onFilterChange={(value) => setFilter(value)}
         depth={Math.min(getDepth(currentPrefix), MAX_FOLDER_DEPTH)}
       />
 
@@ -445,6 +443,8 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         onMove={(key) => handleMove(key, false)}
         onDelete={(key) => handleDelete(key, false)}
         filterLabel={filterLabel}
+        filter={filter}
+        onFilterChange={(value) => setFilter(value)}
         isAdmin={isAdmin}
         itemsPerPage={ITEMS_PER_PAGE}
       />
