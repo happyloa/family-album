@@ -363,6 +363,19 @@ function removeTrailingExtension(name: string, extension: string) {
   return name.toLowerCase().endsWith(extension.toLowerCase()) ? name.slice(0, -extension.length) : name;
 }
 
+function buildUniqueFileName(baseName: string, extension: string, existingNames: Set<string>) {
+  let counter = 2;
+  let candidate = extension ? `${baseName}${extension}` : baseName;
+
+  while (existingNames.has(candidate)) {
+    const numberedBase = `${baseName} (${counter})`;
+    candidate = extension ? `${numberedBase}${extension}` : numberedBase;
+    counter += 1;
+  }
+
+  return candidate;
+}
+
 export async function renameFile(key: string, newName: string) {
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
@@ -372,9 +385,25 @@ export async function renameFile(key: string, newName: string) {
   const extension = extractExtension(currentName);
   const sanitizedNewName = sanitizeSegment(newName);
   const baseName = removeTrailingExtension(sanitizedNewName, extension);
-  const finalName = extension ? `${baseName}${extension}` : sanitizedNewName;
+  const parentPrefix = sanitizePath(parent);
+  const existingNames = new Set<string>();
+
+  if (parentPrefix || parent === '') {
+    const listing = await listMedia(parentPrefix);
+    for (const file of listing.files) {
+      if (file.key === normalizedKey) continue;
+      const name = file.key.split('/').pop();
+      if (name) existingNames.add(name);
+    }
+  }
+
+  const finalName = buildUniqueFileName(baseName, extension, existingNames);
 
   const newKey = parent ? `${sanitizePath(parent)}/${finalName}` : finalName;
+
+  if (newKey === normalizedKey) {
+    return { key: newKey, url: encodeKeyForUrl(newKey, env.R2_PUBLIC_BASE), type: inferType(newKey) } satisfies MediaFile;
+  }
 
   const sourceKey = buildObjectKey(normalizedKey);
   const targetKey = buildObjectKey(newKey);
