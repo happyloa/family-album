@@ -11,12 +11,17 @@
 
 ## 開發指引
 
-1. 安裝套件：
+1. 確認環境：建議使用 Node.js 20 以上版本，並確保已安裝 npm。
+2. 安裝套件：
    ```bash
    npm install
    ```
-2. 設定環境變數，複製 `.env.example` 為 `.env.local`，並填入 Cloudflare R2 的資訊。
-3. 本機啟動：
+3. 設定環境變數：
+   ```bash
+   cp .env.example .env.local
+   ```
+   依照下一節的說明填入 Cloudflare R2 與管理密碼相關設定。
+4. 本機啟動：
    ```bash
    npm run dev
    ```
