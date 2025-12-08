@@ -52,6 +52,22 @@ export function MediaSection({
     { key: 'video', label: '影片' }
   ];
 
+  const formatTimestamp = (value: string) => {
+    const parsed = new Date(value);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, '0');
+      const day = String(parsed.getDate()).padStart(2, '0');
+      const hours = String(parsed.getHours()).padStart(2, '0');
+      const minutes = String(parsed.getMinutes()).padStart(2, '0');
+
+      return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+
+    return value.replace('T', ' ').replace(/Z$/, '');
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -135,7 +151,9 @@ export function MediaSection({
                 <p className="truncate text-sm font-semibold text-white" title={item.key}>
                   {item.key.split('/').pop()}
                 </p>
-                {item.lastModified && <p className="text-xs text-slate-400">更新：{item.lastModified}</p>}
+                {item.lastModified && (
+                  <p className="text-xs text-slate-400">更新：{formatTimestamp(item.lastModified)}</p>
+                )}
               </div>
               {isAdmin && (
                 <div className="flex flex-wrap items-center gap-2">
