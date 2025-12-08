@@ -47,6 +47,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [messageTone, setMessageTone] = useState<MessageTone>('info');
   const [selectedMedia, setSelectedMedia] = useState<MediaFile | null>(null);
   const [filter, setFilter] = useState<FilterOption>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
   const pushMessage = (text: string, tone: MessageTone = 'info') => {
@@ -73,10 +74,34 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     return [{ label: '根目錄', key: '' }, ...nested];
   }, [currentPrefix]);
 
-  const filteredFiles = useMemo(
-    () => (filter === 'all' ? files : files.filter((file) => file.type === filter)),
-    [files, filter]
-  );
+  const hasImages = useMemo(() => files.some((file) => file.type === 'image'), [files]);
+  const hasVideos = useMemo(() => files.some((file) => file.type === 'video'), [files]);
+  const filterVisible = hasImages && hasVideos;
+  const searchEnabled = files.length > 36;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  useEffect(() => {
+    if (!filterVisible && filter !== 'all') {
+      setFilter('all');
+    }
+  }, [filterVisible, filter]);
+
+  useEffect(() => {
+    if (!searchEnabled && searchQuery) {
+      setSearchQuery('');
+    }
+  }, [searchEnabled, searchQuery]);
+
+  const filteredFiles = useMemo(() => {
+    const byType = filterVisible && filter !== 'all' ? files.filter((file) => file.type === filter) : files;
+
+    if (!searchEnabled || !normalizedQuery) return byType;
+
+    return byType.filter((file) => {
+      const title = file.key.split('/').pop()?.toLowerCase() ?? '';
+      return title.includes(normalizedQuery);
+    });
+  }, [files, filter, filterVisible, searchEnabled, normalizedQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filteredFiles.length / ITEMS_PER_PAGE));
   const paginatedFiles = useMemo(() => {
@@ -92,7 +117,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter]);
+  }, [filter, normalizedQuery]);
 
   const authorizedFetch: typeof fetch = (input, init = {}) => {
     const headers = new Headers(init.headers || {});
@@ -367,7 +392,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   };
 
   const hasItems = files.length > 0 || folders.length > 0;
-  const filterLabel = filter === 'all' ? '全部' : filter === 'image' ? '僅圖片' : '僅影片';
+  const filterLabel = filterVisible ? (filter === 'all' ? '全部' : filter === 'image' ? '僅圖片' : '僅影片') : '全部';
 
   return (
     <section className="relative space-y-5">
@@ -433,6 +458,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       />
 
       <MediaSection
+        allFilesCount={files.length}
         files={filteredFiles}
         paginatedFiles={paginatedFiles}
         currentPage={currentPage}
@@ -444,7 +470,11 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         onDelete={(key) => handleDelete(key, false)}
         filterLabel={filterLabel}
         filter={filter}
+        filterVisible={filterVisible}
         onFilterChange={(value) => setFilter(value)}
+        searchEnabled={searchEnabled}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
         isAdmin={isAdmin}
         itemsPerPage={ITEMS_PER_PAGE}
       />

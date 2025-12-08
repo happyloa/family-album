@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { MediaFile } from './types';
 
 export function MediaSection({
+  allFilesCount,
   files,
   paginatedFiles,
   currentPage,
@@ -15,10 +16,15 @@ export function MediaSection({
   onDelete,
   filterLabel,
   filter,
+  filterVisible,
   onFilterChange,
+  searchEnabled,
+  searchQuery,
+  onSearchChange,
   isAdmin,
   itemsPerPage
 }: {
+  allFilesCount: number;
   files: MediaFile[];
   paginatedFiles: MediaFile[];
   currentPage: number;
@@ -30,11 +36,15 @@ export function MediaSection({
   onDelete: (key: string) => void;
   filterLabel: string;
   filter: 'all' | 'image' | 'video';
+  filterVisible: boolean;
   onFilterChange: (value: 'all' | 'image' | 'video') => void;
+  searchEnabled: boolean;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
   isAdmin: boolean;
   itemsPerPage: number;
 }) {
-  if (!files.length) return null;
+  if (!allFilesCount) return null;
 
   const filters: { key: 'all' | 'image' | 'video'; label: string }[] = [
     { key: 'all', label: '全部' },
@@ -49,23 +59,49 @@ export function MediaSection({
           <h3 className="text-xl font-semibold text-white">媒體檔案</h3>
           <span className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-200">{filterLabel}（共 {files.length}）</span>
         </div>
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200">
-          {filters.map(({ key, label }) => (
-            <button
-              key={key}
-              className={`rounded-lg border px-3 py-1.5 transition ${
-                filter === key
-                  ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-50 shadow-glow'
-                  : 'border-slate-700 bg-slate-800 text-slate-100 hover:border-emerald-300 hover:text-emerald-100'
-              }`}
-              type="button"
-              onClick={() => onFilterChange(key)}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          {searchEnabled && (
+            <label className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200">
+              <span className="text-slate-400">搜尋</span>
+              <input
+                className="w-40 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-xs font-medium text-white shadow-inner outline-none ring-emerald-500/50 focus:border-emerald-400 focus:ring"
+                type="search"
+                value={searchQuery}
+                onChange={(event) => onSearchChange(event.target.value)}
+                placeholder="輸入標題關鍵字"
+                aria-label="搜尋媒體標題"
+              />
+            </label>
+          )}
+          {filterVisible && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200">
+              {filters.map(({ key, label }) => (
+                <button
+                  key={key}
+                  className={`rounded-lg border px-3 py-1.5 transition ${
+                    filter === key
+                      ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-50 shadow-glow'
+                      : 'border-slate-700 bg-slate-800 text-slate-100 hover:border-emerald-300 hover:text-emerald-100'
+                  }`}
+                  type="button"
+                  onClick={() => onFilterChange(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+      {files.length === 0 && (
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-100">
+          {searchQuery.trim()
+            ? `沒有找到包含「${searchQuery.trim()}」的媒體，請換個關鍵字或清除搜尋。`
+            : filterVisible && filter !== 'all'
+              ? '這個分類目前沒有媒體，請切換其他類型或回到全部。'
+              : '目前沒有符合條件的媒體。'}
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {paginatedFiles.map((item) => (
           <article
@@ -88,7 +124,6 @@ export function MediaSection({
               ) : (
                 <video className="h-full w-full object-cover" src={item.url} preload="metadata" muted playsInline />
               )}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent" />
               <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-center justify-end text-xs font-semibold text-white">
                 <span className="rounded-lg bg-slate-900/80 px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-100 ring-1 ring-slate-700">
                   {item.type === 'image' ? '圖片' : '影片'}
