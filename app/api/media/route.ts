@@ -9,10 +9,51 @@ import {
   renameFile,
   renameFolder
 } from '@/lib/r2';
+import { MAX_FOLDER_DEPTH, MAX_FOLDER_NAME_LENGTH } from '@/components/media/constants';
 
 // This route must run on the Edge runtime to be compatible with Cloudflare Pages
 // builds. The R2 client in lib/r2.ts is implemented with fetch so it works here.
 export const runtime = 'edge';
+
+const getDepth = (path: string) => (path ? path.split('/').filter(Boolean).length : 0);
+
+export function validateCreateFolder(prefix: string, name: string | undefined) {
+  if (!name) return '資料夾名稱不可為空';
+
+  if (name.length > MAX_FOLDER_NAME_LENGTH) {
+    return `資料夾名稱最多 ${MAX_FOLDER_NAME_LENGTH} 個字`;
+  }
+
+  if (getDepth(prefix) + 1 > MAX_FOLDER_DEPTH) {
+    return '資料夾層數最多兩層，無法在此建立新資料夾';
+  }
+
+  return null;
+}
+
+export function validateRenameFolder(isFolder: boolean | undefined, newName: string) {
+  if (!isFolder) return null;
+
+  if (newName.length > MAX_FOLDER_NAME_LENGTH) {
+    return `資料夾名稱最多 ${MAX_FOLDER_NAME_LENGTH} 個字`;
+  }
+
+  return null;
+}
+
+export function validateMoveTarget(targetPrefix: string, isFolder: boolean | undefined) {
+  const targetDepth = getDepth(targetPrefix);
+
+  if (targetDepth > MAX_FOLDER_DEPTH) {
+    return '資料夾層數最多兩層，請選擇較淺的目標路徑';
+  }
+
+  if (isFolder && targetDepth + 1 > MAX_FOLDER_DEPTH) {
+    return '移動後會超過資料夾層數上限（2 層）';
+  }
+
+  return null;
+}
 
 function ensureAdmin(request: NextRequest) {
   const adminToken = process.env.ADMIN_ACCESS_TOKEN;
@@ -55,8 +96,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '未知的請求' }, { status: 400 });
     }
 
-    if (!body.name) {
-      return NextResponse.json({ error: '資料夾名稱不可為空' }, { status: 400 });
+    const validationError = validateCreateFolder(body.prefix || '', body.name);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
     const folder = await createFolder(body.prefix || '', body.name);
@@ -87,6 +129,11 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: '缺少必要參數' }, { status: 400 });
       }
 
+      const renameError = validateRenameFolder(body.isFolder, body.newName);
+      if (renameError) {
+        return NextResponse.json({ error: renameError }, { status: 400 });
+      }
+
       if (body.isFolder) {
         const folder = await renameFolder(body.key, body.newName);
         return NextResponse.json({ folder });
@@ -98,6 +145,11 @@ export async function PATCH(request: NextRequest) {
 
     if (!('targetPrefix' in body)) {
       return NextResponse.json({ error: '缺少目標路徑' }, { status: 400 });
+    }
+
+    const moveError = validateMoveTarget(body.targetPrefix || '', body.isFolder);
+    if (moveError) {
+      return NextResponse.json({ error: moveError }, { status: 400 });
     }
 
     if (body.isFolder) {
