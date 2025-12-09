@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { MediaThumbnail } from './MediaThumbnail';
 import { MediaFile } from './types';
 
 export function MediaSection({
@@ -134,18 +134,7 @@ export function MediaSection({
             tabIndex={0}
             aria-label={`${item.key.split('/').pop()} 預覽`}
           >
-            <div className="relative aspect-[4/3] overflow-hidden bg-slate-900">
-              {item.type === 'image' ? (
-                <Image src={item.url} alt={item.key} fill className="object-cover" sizes="(min-width: 1280px) 25vw, 50vw" />
-              ) : (
-                <video className="h-full w-full object-cover" src={item.url} preload="metadata" muted playsInline />
-              )}
-              <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-center justify-end text-xs font-semibold text-white">
-                <span className="rounded-lg bg-slate-900/80 px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-100 ring-1 ring-slate-700">
-                  {item.type === 'image' ? '圖片' : '影片'}
-                </span>
-              </div>
-            </div>
+            <MediaThumbnail media={item} />
             <div className="flex flex-col gap-2 p-4 text-sm text-slate-100">
               <div className="space-y-1">
                 <p className="truncate text-sm font-semibold text-white" title={item.key}>

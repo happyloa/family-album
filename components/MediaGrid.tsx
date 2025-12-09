@@ -5,6 +5,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { UploadForm } from './UploadForm';
 import { AdminAccessPanel } from './media/AdminAccessPanel';
 import { BreadcrumbNav } from './media/BreadcrumbNav';
+import {
+  ADMIN_SESSION_DURATION_MS,
+  ADMIN_TOKEN_STORAGE_KEY,
+  ITEMS_PER_PAGE,
+  MAX_ADMIN_TOKEN_LENGTH,
+  MAX_FOLDER_DEPTH,
+  MAX_FOLDER_NAME_LENGTH
+} from './media/constants';
 import { EmptyState } from './media/EmptyState';
 import { FolderCreator } from './media/FolderCreator';
 import { FolderGrid } from './media/FolderGrid';
@@ -14,17 +22,11 @@ import { MessageToast } from './media/MessageToast';
 import { PathOverview } from './media/PathOverview';
 import { FolderItem, MediaFile, MediaResponse, MessageTone } from './media/types';
 
-const MAX_FOLDER_DEPTH = 2;
-const MAX_FOLDER_NAME_LENGTH = 30;
-const MAX_ADMIN_TOKEN_LENGTH = 15;
-const ITEMS_PER_PAGE = 12;
-const ADMIN_TOKEN_STORAGE_KEY = 'adminToken';
-const ADMIN_SESSION_DURATION_MS = 15 * 60 * 1000; // 15 minutes
-
 type FilterOption = 'all' | 'image' | 'video';
 
 type Breadcrumb = { label: string; key: string };
 
+// 移除雜訊字元後再建立乾淨的路徑，避免 R2 Key 異常或被注入
 const sanitizeName = (value: string) => value.replace(/[<>:"/\\|?*]+/g, '').trim();
 const sanitizePath = (value: string) =>
   value
@@ -139,6 +141,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       headers.set('x-admin-token', adminToken);
     }
 
+    // API 端有驗證密碼，透過共用函式統一附上 headers，避免重複程式碼
     return fetch(input, { ...init, headers });
   };
 
@@ -218,6 +221,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       window.clearTimeout(adminTimeoutRef.current);
     }
 
+    // 重新點擊會刷新計時，避免長時間閒置導致管理者操作到一半被踢出
     adminTimeoutRef.current = window.setTimeout(() => {
       clearAdminSession('管理模式已逾時，請重新輸入。');
     }, ADMIN_SESSION_DURATION_MS);
