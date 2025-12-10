@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 export function UploadForm({
   onUploaded,
@@ -53,14 +53,15 @@ export function UploadForm({
     return `${value.toFixed(value >= 10 ? 0 : 2)}${units[index]}`;
   };
 
-  const refreshBucketUsage = async () => {
+  const refreshBucketUsage = useCallback(async () => {
     setUsageLoading(true);
     setUsageError('');
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timeoutId = controller ? window.setTimeout(() => controller.abort(), 10000) : null;
 
     try {
-      const response = await fetch('/api/usage', { signal: controller?.signal });
+      const headers = adminToken ? { 'x-admin-token': adminToken } : undefined;
+      const response = await fetch('/api/usage', { signal: controller?.signal, headers });
       if (!response.ok) {
         throw new Error('Failed to fetch usage');
       }
@@ -68,6 +69,11 @@ export function UploadForm({
       const data: { bytes?: number } = await response.json();
       setUsageBytes(data.bytes ?? 0);
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        setUsageError('取得 bucket 使用量逾時');
+        return;
+      }
+
       setUsageError('無法取得 bucket 使用量');
     } finally {
       setUsageLoading(false);
@@ -75,11 +81,11 @@ export function UploadForm({
         clearTimeout(timeoutId);
       }
     }
-  };
+  }, [adminToken]);
 
   useEffect(() => {
     void refreshBucketUsage();
-  }, []);
+  }, [refreshBucketUsage]);
 
   const overLimit = usageBytes > BUCKET_LIMIT_BYTES;
   const usagePercent = Math.min((usageBytes / BUCKET_LIMIT_BYTES) * 100, 150);
