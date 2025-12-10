@@ -18,11 +18,15 @@ export function UploadForm({
   const [loading, setLoading] = useState(false);
   const [path, setPath] = useState(currentPath);
   const [progress, setProgress] = useState(0);
+  const [usageBytes, setUsageBytes] = useState(0);
+  const [usageLoading, setUsageLoading] = useState(true);
+  const [usageError, setUsageError] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const resetFeedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const MAX_TOTAL_SIZE_MB = 400;
   const MAX_SINGLE_SIZE_MB = 200;
+  const BUCKET_LIMIT_BYTES = 10 * 1024 * 1024 * 1024; // 10GB
 
   const updateStatus = (text: string, tone: 'info' | 'success' | 'error' = 'info') => {
     setStatus(text);
@@ -40,6 +44,50 @@ export function UploadForm({
       }
     };
   }, []);
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const value = bytes / 1024 ** index;
+    return `${value.toFixed(value >= 10 ? 0 : 2)}${units[index]}`;
+  };
+
+  const refreshBucketUsage = async () => {
+    setUsageLoading(true);
+    setUsageError('');
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? window.setTimeout(() => controller.abort(), 10000) : null;
+
+    try {
+      const response = await fetch('/api/usage', { signal: controller?.signal });
+      if (!response.ok) {
+        throw new Error('Failed to fetch usage');
+      }
+
+      const data: { bytes?: number } = await response.json();
+      setUsageBytes(data.bytes ?? 0);
+    } catch (error) {
+      setUsageError('無法取得 bucket 使用量');
+    } finally {
+      setUsageLoading(false);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    }
+  };
+
+  useEffect(() => {
+    void refreshBucketUsage();
+  }, []);
+
+  const overLimit = usageBytes > BUCKET_LIMIT_BYTES;
+  const usagePercent = Math.min((usageBytes / BUCKET_LIMIT_BYTES) * 100, 150);
+  const usageLabel = usageLoading
+    ? '容量計算中...'
+    : usageError
+      ? usageError
+      : `${formatBytes(usageBytes)} / 10GB`;
 
   // 針對圖片使用 canvas 降解析度後輸出，降低檔案大小
   const compressImage = async (file: File) => {
@@ -102,6 +150,14 @@ export function UploadForm({
     if (typeof navigator !== 'undefined' && navigator && !navigator.onLine) {
       updateStatus('目前處於離線狀態，請恢復網路後再試。', 'error');
       return;
+    }
+
+    if (!usageLoading && !usageError && overLimit) {
+      const confirmed = window.confirm('目前 R2 容量已超過 10GB，持續上傳可能會被 Cloudflare 計費，確定要繼續嗎？');
+      if (!confirmed) {
+        updateStatus('已取消上傳以避免額外費用。', 'info');
+        return;
+      }
     }
 
     setLoading(true);
@@ -175,6 +231,8 @@ export function UploadForm({
           setStatus('');
           setStatusTone('info');
         }, 5000);
+
+        void refreshBucketUsage();
       }
     } catch (error) {
       updateStatus('上傳時發生錯誤，請稍後再試。', 'error');
@@ -193,6 +251,23 @@ export function UploadForm({
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">上傳家庭回憶</p>
         <h3 className="text-lg font-semibold text-white">照片、影片直接存到 Cloudflare R2</h3>
         <p className="text-sm text-slate-400">支援圖片與影片，上傳前會自動壓縮以節省流量，完成後清單會自動刷新。</p>
+      </div>
+      <div className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+        <div className="flex items-center justify-between text-xs font-semibold text-emerald-200">
+          <span>Bucket 使用量</span>
+          <span className={overLimit ? 'text-amber-200' : 'text-emerald-100'}>{usageLabel}</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${
+              overLimit ? 'bg-gradient-to-r from-amber-400 to-rose-500' : 'bg-gradient-to-r from-emerald-400 to-cyan-400'
+            }`}
+            style={{ width: `${usagePercent}%` }}
+          />
+        </div>
+        <p className="text-xs text-slate-400">
+          以 10GB 為免費額度計算，超過後 Cloudflare R2 可能會收取儲存與傳輸費用。
+        </p>
       </div>
       <label className="flex flex-col gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-4 text-sm text-slate-300">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">選擇檔案</span>

@@ -27,6 +27,10 @@ export type MediaListing = {
   files: MediaFile[];
 };
 
+type BucketUsage = {
+  bytes: number;
+};
+
 const processEnv = typeof process !== 'undefined' ? process.env : undefined;
 
 function loadEnv(): Record<EnvKeys, string> {
@@ -302,6 +306,27 @@ export async function listMedia(prefix = ''): Promise<MediaListing> {
     folders,
     files
   } satisfies MediaListing;
+}
+
+export async function getBucketUsage(): Promise<BucketUsage> {
+  let continuationToken: string | undefined;
+  let totalBytes = 0;
+
+  do {
+    const url = buildListUrl('', { continuationToken });
+    const response = await signedFetch(url.toString());
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch bucket usage: ${response.status} ${response.statusText}`);
+    }
+
+    const { contents, isTruncated, nextContinuationToken } = parseListResult(await response.text(), '', false);
+
+    totalBytes += contents.reduce((sum, item) => sum + (item.size ?? 0), 0);
+    continuationToken = isTruncated ? nextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return { bytes: totalBytes } satisfies BucketUsage;
 }
 
 export async function uploadToR2(file: File, targetPrefix = '') {
