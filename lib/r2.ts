@@ -1,3 +1,4 @@
+import { MAX_FOLDER_DEPTH } from '@/components/media/constants';
 import { AwsClient } from 'aws4fetch';
 import { XMLParser } from 'fast-xml-parser';
 
@@ -30,6 +31,8 @@ export type MediaListing = {
 type BucketUsage = {
   bytes: number;
 };
+
+const MAX_FILE_NAME_LENGTH = 255;
 
 const processEnv = typeof process !== 'undefined' ? process.env : undefined;
 
@@ -88,6 +91,10 @@ function sanitizePath(path: string) {
     .map((segment) => sanitizeSegment(segment))
     .filter(Boolean)
     .join('/');
+}
+
+function getDepth(path: string) {
+  return path ? path.split('/').filter(Boolean).length : 0;
 }
 
 function buildObjectKey(path: string) {
@@ -331,7 +338,25 @@ export async function getBucketUsage(): Promise<BucketUsage> {
 
 export async function uploadToR2(file: File, targetPrefix = '') {
   const normalizedPrefix = sanitizePath(targetPrefix);
-  const key = `${buildFolderKey(normalizedPrefix)}${Date.now()}-${file.name}`;
+  if (getDepth(normalizedPrefix) > MAX_FOLDER_DEPTH) {
+    throw new Error('資料夾層數最多兩層，請選擇較淺的路徑');
+  }
+
+  const sanitizedFileName = sanitizeSegment(file.name);
+
+  if (!sanitizedFileName) {
+    throw new Error('Invalid file name');
+  }
+
+  if (sanitizedFileName.startsWith('..')) {
+    throw new Error('檔案名稱包含無效路徑片段');
+  }
+
+  if (sanitizedFileName.length > MAX_FILE_NAME_LENGTH) {
+    throw new Error(`檔案名稱最多 ${MAX_FILE_NAME_LENGTH} 個字元`);
+  }
+
+  const key = `${buildFolderKey(normalizedPrefix)}${Date.now()}-${sanitizedFileName}`;
   const body = new Uint8Array(await file.arrayBuffer());
 
   const url = buildEndpointPath(`/${env.R2_BUCKET_NAME}/${key}`);
