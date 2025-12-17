@@ -29,13 +29,14 @@
 
 ## Cloudflare R2 設定與部署到 Pages
 
-1. **建立 Bucket 與權限**：
-   - 在 R2 建立新的 bucket，記下 bucket 名稱。
-   - 前往 **Settings → Public access** 勾選公開讀取，並將 `R2_PUBLIC_BASE` 設成該公開 URL（格式類似 `https://<bucket>.<account>.r2.cloudflarestorage.com`）。
-   - 若要限制公開權限，則改成預先建立 Cloudflare Signed URL 流程，並更新 API route 以驗證請求。
-2. **建立 API Token**：
-   - 在 Cloudflare 的 **R2 → Manage R2 API tokens** 新增 Access Key，取得 `R2_ACCESS_KEY_ID` 與 `R2_SECRET_ACCESS_KEY`。
-   - `R2_ACCOUNT_ID` 可在 Cloudflare 帳戶首頁找到。
+介面名稱與路徑可能因 Cloudflare 更新而異，若找不到本文提到的選項，可用頁面搜尋或在 R2 服務中尋找關鍵字：「bucket」「Public access」「CORS」「API token」「Access key」。
+
+1. **建立 Bucket 與權限（可公開或私有）**：
+   - 在 R2 新增 bucket 並記下名稱；如需公開讀取，找到 Public access 或權限設定啟用公開，並將 `R2_PUBLIC_BASE` 設為公開 URL（格式類似 `https://<bucket>.<account>.r2.cloudflarestorage.com`）。
+   - 若要私有存取，跳過公開讀取，改用簽名網址或在 API 層驗證，並保留 `R2_PUBLIC_BASE` 供應用組出讀取路徑。
+2. **建立 API Token / Access Keys**：
+   - 在 R2 或帳戶的「API Tokens / Access Keys」頁面新增一組金鑰，取得 `R2_ACCESS_KEY_ID` 與 `R2_SECRET_ACCESS_KEY`；`R2_ACCOUNT_ID` 通常會在同一頁或帳戶首頁顯示。
+   - 若介面改版，先搜尋「Manage R2 API tokens」「Access keys」等關鍵字，多半位於 Security、API 或 R2 設定分頁。
 3. **設定環境變數**：
    - 將以下變數填入 `.env.local`（開發）或 Pages 環境設定：
      - `R2_ACCOUNT_ID`
@@ -43,13 +44,13 @@
      - `R2_SECRET_ACCESS_KEY`
      - `R2_BUCKET_NAME`
      - `R2_PUBLIC_BASE`
-     - `ADMIN_ACCESS_TOKEN`（長度最多 15 個字，寫入 API 皆須帶上 `x-admin-token` 標頭）
+     - `ADMIN_ACCESS_TOKEN`（長度最多 15 個字，寫入 API 皆須帶上 `x-admin-token` 標頭；不要儲存在公開書籤或共用裝置，以降低洩漏風險）
    - 若透過 Pages Build，確保在「Environment Variables」與「Project settings → Build system → R2 bindings」一致。
 4. **CORS 與檔案型態**：
    - 如果要在瀏覽器直接存取媒體，請在 R2 bucket CORS 規則加入允許 `GET, HEAD, OPTIONS`，並允許 `Content-Type` 標頭。
    - 上傳 API 會限制為圖片與影片格式，並在瀏覽器端自動進行壓縮以節省流量。
-5. **部署**：
-   - Pages 部署完成後，可透過 `/api/upload` 上傳到指定路徑，並用 `/api/media` 取得媒體列表。
+5. **部署與驗證**：
+   - Pages 部署完成後，可透過 `/api/upload` 上傳到指定路徑，並用 `/api/media` 取得媒體列表；若遇到按鈕位置或權限名稱改動，可比對上述關鍵字重新定位設定。
 
 ## 重要說明
 
