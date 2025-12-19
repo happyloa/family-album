@@ -7,7 +7,13 @@ import {
   createAdminRateLimiter
 } from '@/lib/admin-rate-limit';
 
-import { MAX_IMAGE_SIZE_BYTES, MAX_VIDEO_SIZE_BYTES, getSizeLimitByMime } from './constants';
+import {
+  MAX_FILE_COUNT,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_TOTAL_SIZE_MB,
+  MAX_VIDEO_SIZE_BYTES,
+  getSizeLimitByMime
+} from './constants';
 
 // 使用 Edge Runtime 以符合 Cloudflare Pages 的執行環境。
 export const runtime = 'edge';
@@ -52,6 +58,30 @@ export async function POST(request: Request) {
 
     if (!files.length) {
       return NextResponse.json({ error: '缺少檔案' }, { status: 400 });
+    }
+
+    const totalFileCount = files.length;
+    const totalSizeBytes = files.reduce((sum, file) => sum + file.size, 0);
+    const maxTotalSizeBytes = MAX_TOTAL_SIZE_MB * 1024 * 1024;
+
+    if (totalFileCount > MAX_FILE_COUNT) {
+      return NextResponse.json(
+        {
+          error: `檔案數量超過上限 ${MAX_FILE_COUNT} 個，請分批上傳。`,
+          limits: { maxFileCount: MAX_FILE_COUNT, maxTotalSizeMB: MAX_TOTAL_SIZE_MB }
+        },
+        { status: 400 }
+      );
+    }
+
+    if (totalSizeBytes > maxTotalSizeBytes) {
+      return NextResponse.json(
+        {
+          error: `總容量超過 ${MAX_TOTAL_SIZE_MB}MB，請分批上傳。`,
+          limits: { maxFileCount: MAX_FILE_COUNT, maxTotalSizeMB: MAX_TOTAL_SIZE_MB }
+        },
+        { status: 400 }
+      );
     }
 
     const invalidFiles = files

@@ -25,7 +25,10 @@ export function UploadForm({
   const resetFeedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const MAX_TOTAL_SIZE_MB = 400;
-  const MAX_SINGLE_SIZE_MB = 200;
+  const MAX_SINGLE_SIZE_MB = (() => {
+    const envValue = Number(process.env.NEXT_PUBLIC_MAX_SINGLE_SIZE_MB);
+    return Number.isFinite(envValue) && envValue > 0 ? envValue : 150;
+  })();
   const BUCKET_LIMIT_BYTES = 10 * 1024 * 1024 * 1024; // 10GB
 
   const updateStatus = (text: string, tone: 'info' | 'success' | 'error' = 'info') => {

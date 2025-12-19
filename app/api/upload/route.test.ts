@@ -59,14 +59,14 @@ describe('upload route validation', () => {
 
   it('rejects mixed batches and skips uploading valid files', async () => {
     const validImage = createFile(500_000, 'image/png', 'ok.png');
-    const invalidVideo = createFile(201 * 1024 * 1024, 'video/mp4', 'too-big.mp4');
+    const invalidVideo = createFile(151 * 1024 * 1024, 'video/mp4', 'too-big.mp4');
 
     const response = await POST(createRequest([validImage, invalidVideo]));
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       error: '無效的檔案',
-      details: [{ name: 'too-big.mp4', reason: '影片檔案大小上限 200 MB' }]
+      details: [{ name: 'too-big.mp4', reason: '影片檔案大小上限 150 MB' }]
     });
     expect(uploadToR2).not.toHaveBeenCalled();
   });
