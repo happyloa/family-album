@@ -40,14 +40,16 @@
    - 若介面改版，先搜尋「Manage R2 API tokens」「Access keys」等關鍵字，多半位於 Security、API 或 R2 設定分頁。
 3. **設定環境變數**：
    - 將以下變數填入 `.env.local`（開發）或 Pages 環境設定：
-     - `R2_ACCOUNT_ID`
-     - `R2_ACCESS_KEY_ID`
-     - `R2_SECRET_ACCESS_KEY`
-    - `R2_BUCKET_NAME`
-    - `R2_PUBLIC_BASE`
-    - `ADMIN_ACCESS_TOKEN`（長度最多 15 個字，寫入 API 皆須帶上 `x-admin-token` 標頭；不要儲存在公開書籤或共用裝置，以降低洩漏風險）
-    - `ADMIN_RATE_LIMIT_MAX_FAILURES`（可選，管理密碼允許的失敗次數；未設定則使用 5 次 / 5 分鐘的預設限制）
-    - `MAX_SINGLE_SIZE_MB`（可選，單檔上傳大小上限，預設 150MB；若要前端同步提示，請同時設定 `NEXT_PUBLIC_MAX_SINGLE_SIZE_MB`）
+     - 必填
+       - `R2_ACCOUNT_ID`
+       - `R2_ACCESS_KEY_ID`
+       - `R2_SECRET_ACCESS_KEY`
+       - `R2_BUCKET_NAME`
+       - `R2_PUBLIC_BASE`
+       - `ADMIN_ACCESS_TOKEN`（長度最多 15 個字，寫入 API 皆須帶上 `x-admin-token` 標頭；不要儲存在公開書籤或共用裝置，以降低洩漏風險）
+     - 選填
+       - `ADMIN_RATE_LIMIT_MAX_FAILURES`（管理密碼允許的失敗次數；未設定則使用 5 次 / 5 分鐘的預設限制）
+       - `MAX_SINGLE_SIZE_MB`（單檔上傳大小上限，預設 150MB；若要前端同步提示，請同時設定 `NEXT_PUBLIC_MAX_SINGLE_SIZE_MB`）
    - 若透過 Pages Build，確保在「Environment Variables」與「Project settings → Build system → R2 bindings」一致。
 4. **CORS 與檔案型態**：
    - 如果要在瀏覽器直接存取媒體，請在 R2 bucket CORS 規則加入允許 `GET, HEAD, OPTIONS`，並允許 `Content-Type` 標頭。
