@@ -5,3 +5,4 @@
   Referrer-Policy: no-referrer
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   X-Content-Type-Options: nosniff
+  X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex
