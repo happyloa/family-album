@@ -10,6 +10,7 @@ import {
   renameFolder
 } from '@/lib/r2';
 import { MAX_FOLDER_DEPTH, MAX_FOLDER_NAME_LENGTH } from '@/components/media/constants';
+import { AdminRateLimiter, createAdminRateLimiter } from '@/lib/admin-rate-limit';
 
 // This route must run on the Edge runtime to be compatible with Cloudflare Pages
 // builds. The R2 client in lib/r2.ts is implemented with fetch so it works here.
@@ -55,7 +56,7 @@ export function validateMoveTarget(targetPrefix: string, isFolder: boolean | und
   return null;
 }
 
-function ensureAdmin(request: NextRequest) {
+async function ensureAdmin(request: NextRequest, rateLimiter: AdminRateLimiter) {
   const adminToken = process.env.ADMIN_ACCESS_TOKEN;
   if (!adminToken) {
     console.error('Missing ADMIN_ACCESS_TOKEN');
@@ -64,9 +65,11 @@ function ensureAdmin(request: NextRequest) {
 
   const providedToken = request.headers.get('x-admin-token');
   if (!providedToken || providedToken !== adminToken) {
+    await rateLimiter.recordFailure();
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  await rateLimiter.reset();
   return null;
 }
 
@@ -83,7 +86,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authError = ensureAdmin(request);
+    const rateLimiter = createAdminRateLimiter(request);
+    const rateLimitError = await rateLimiter.check();
+    if (rateLimitError) return rateLimitError;
+    const authError = await ensureAdmin(request, rateLimiter);
     if (authError) return authError;
 
     const body = await request.json();
@@ -111,7 +117,10 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const authError = ensureAdmin(request);
+    const rateLimiter = createAdminRateLimiter(request);
+    const rateLimitError = await rateLimiter.check();
+    if (rateLimitError) return rateLimitError;
+    const authError = await ensureAdmin(request, rateLimiter);
     if (authError) return authError;
 
     const body = await request.json();
@@ -167,7 +176,10 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const authError = ensureAdmin(request);
+    const rateLimiter = createAdminRateLimiter(request);
+    const rateLimitError = await rateLimiter.check();
+    if (rateLimitError) return rateLimitError;
+    const authError = await ensureAdmin(request, rateLimiter);
     if (authError) return authError;
 
     const body = await request.json();

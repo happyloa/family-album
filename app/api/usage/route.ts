@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 
 import { getBucketUsage } from '@/lib/r2';
+import { AdminRateLimiter, createAdminRateLimiter } from '@/lib/admin-rate-limit';
 
 // Edge runtime to align with other R2 operations
 export const runtime = 'edge';
 
-function ensureAdmin(request: Request) {
+async function ensureAdmin(request: Request, rateLimiter: AdminRateLimiter) {
   const adminToken = process.env.ADMIN_ACCESS_TOKEN;
   if (!adminToken) {
     console.error('Missing ADMIN_ACCESS_TOKEN');
@@ -14,15 +15,20 @@ function ensureAdmin(request: Request) {
 
   const providedToken = request.headers.get('x-admin-token');
   if (!providedToken || providedToken !== adminToken) {
+    await rateLimiter.recordFailure();
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  await rateLimiter.reset();
   return null;
 }
 
 export async function GET(request: Request) {
   try {
-    const authError = ensureAdmin(request);
+    const rateLimiter = createAdminRateLimiter(request);
+    const rateLimitError = await rateLimiter.check();
+    if (rateLimitError) return rateLimitError;
+    const authError = await ensureAdmin(request, rateLimiter);
     if (authError) return authError;
 
     const usage = await getBucketUsage();
