@@ -9,7 +9,19 @@ const notoSans = Noto_Sans_TC({
 
 export const metadata: Metadata = {
   title: '我們這一家',
-  description: '為家人打造的私密相簿，重溫每一趟旅程的回憶。'
+  description: '為家人打造的私密相簿，重溫每一趟旅程的回憶。',
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      'max-image-preview': 'none',
+      'max-snippet': 0,
+      'max-video-preview': 0
+    }
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
