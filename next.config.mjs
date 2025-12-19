@@ -41,7 +41,7 @@ const contentSecurityPolicy = [
   "font-src 'self' data:",
   "connect-src 'self' https:",
   `img-src 'self' data: blob: ${r2AllowedOrigins.join(' ')}`,
-  `media-src 'self' data: blob: ${r2AllowedOrigins.join(' ')}`
+  `media-src 'self' https: data: blob: ${r2AllowedOrigins.join(' ')}`
 ].join('; ');
 
 const remotePatterns = [
