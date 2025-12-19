@@ -30,10 +30,6 @@ const r2AllowedOrigins = [
   'https://*.r2.dev'
 ];
 
-if (customUrl?.origin) {
-  r2AllowedOrigins.push(customUrl.origin);
-}
-
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
