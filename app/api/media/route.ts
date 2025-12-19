@@ -10,7 +10,12 @@ import {
   renameFolder
 } from '@/lib/r2';
 import { MAX_FOLDER_DEPTH, MAX_FOLDER_NAME_LENGTH } from '@/components/media/constants';
-import { AdminRateLimiter, createAdminRateLimiter } from '@/lib/admin-rate-limit';
+import {
+  ADMIN_RATE_LIMIT_MAX_FAILURES,
+  ADMIN_RATE_LIMIT_WINDOW_MS,
+  AdminRateLimiter,
+  createAdminRateLimiter
+} from '@/lib/admin-rate-limit';
 
 // This route must run on the Edge runtime to be compatible with Cloudflare Pages
 // builds. The R2 client in lib/r2.ts is implemented with fetch so it works here.
@@ -65,8 +70,16 @@ async function ensureAdmin(request: NextRequest, rateLimiter: AdminRateLimiter) 
 
   const providedToken = request.headers.get('x-admin-token');
   if (!providedToken || providedToken !== adminToken) {
-    await rateLimiter.recordFailure();
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const failures = await rateLimiter.recordFailure();
+    const retryAfterMinutes = Math.ceil(ADMIN_RATE_LIMIT_WINDOW_MS / 60000);
+    if (failures >= ADMIN_RATE_LIMIT_MAX_FAILURES) {
+      return NextResponse.json(
+        { error: `因密碼輸入不正確，請於 ${retryAfterMinutes} 分鐘後再試。`, retryAfterMinutes },
+        { status: 429 }
+      );
+    }
+    const remainingAttempts = Math.max(ADMIN_RATE_LIMIT_MAX_FAILURES - failures, 0);
+    return NextResponse.json({ error: 'Unauthorized', remainingAttempts }, { status: 401 });
   }
 
   await rateLimiter.reset();

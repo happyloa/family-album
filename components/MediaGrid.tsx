@@ -257,9 +257,23 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       });
 
       if (!response.ok) {
+        let payload: { remainingAttempts?: number; retryAfterMinutes?: number } | null = null;
+        try {
+          payload = (await response.json()) as { remainingAttempts?: number; retryAfterMinutes?: number };
+        } catch (parseError) {
+          payload = null;
+        }
+
         clearAdminSession();
         if (!options?.silent) {
-          pushMessage('管理密碼不正確，請再試一次', 'error');
+          if (response.status === 429) {
+            const minutes = payload?.retryAfterMinutes ?? 5;
+            pushMessage(`因密碼輸入不正確，請於 ${minutes} 分鐘後再試`, 'error');
+          } else if (response.status === 401 && typeof payload?.remainingAttempts === 'number') {
+            pushMessage(`管理密碼不正確，還有 ${payload.remainingAttempts} 次機會`, 'error');
+          } else {
+            pushMessage('管理密碼不正確，請再試一次', 'error');
+          }
         }
         return false;
       }

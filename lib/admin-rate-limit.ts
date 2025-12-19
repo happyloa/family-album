@@ -17,8 +17,24 @@ type RateLimitStore = {
   reset: (key: string) => Promise<void>;
 };
 
-export const ADMIN_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
-export const ADMIN_RATE_LIMIT_MAX_FAILURES = 5;
+const DEFAULT_ADMIN_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
+const DEFAULT_ADMIN_RATE_LIMIT_MAX_FAILURES = 5;
+
+const processEnv = typeof process !== 'undefined' ? process.env : undefined;
+
+function readPositiveInt(name: string, fallback: number) {
+  const raw = processEnv?.[name];
+  if (!raw) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isNaN(parsed) || parsed <= 0) return fallback;
+  return parsed;
+}
+
+export const ADMIN_RATE_LIMIT_WINDOW_MS = DEFAULT_ADMIN_RATE_LIMIT_WINDOW_MS;
+export const ADMIN_RATE_LIMIT_MAX_FAILURES = readPositiveInt(
+  'ADMIN_RATE_LIMIT_MAX_FAILURES',
+  DEFAULT_ADMIN_RATE_LIMIT_MAX_FAILURES
+);
 
 const ADMIN_RATE_LIMIT_KEY_PREFIX = 'admin-failure';
 const ADMIN_RATE_LIMIT_WINDOW_SECONDS = Math.ceil(ADMIN_RATE_LIMIT_WINDOW_MS / 1000);
@@ -96,7 +112,7 @@ function buildKey(ip: string) {
 
 export type AdminRateLimiter = {
   check: () => Promise<NextResponse | null>;
-  recordFailure: () => Promise<void>;
+  recordFailure: () => Promise<number>;
   reset: () => Promise<void>;
 };
 
@@ -111,14 +127,14 @@ export function createAdminRateLimiter(request: Request): AdminRateLimiter {
       if (count >= ADMIN_RATE_LIMIT_MAX_FAILURES) {
         const minutes = Math.ceil(ADMIN_RATE_LIMIT_WINDOW_MS / 60000);
         return NextResponse.json(
-          { error: `嘗試次數過多，請於 ${minutes} 分鐘後再試。` },
+          { error: `因密碼輸入不正確，請於 ${minutes} 分鐘後再試。`, retryAfterMinutes: minutes },
           { status: 429 }
         );
       }
       return null;
     },
     async recordFailure() {
-      await store.increment(key, ADMIN_RATE_LIMIT_WINDOW_SECONDS);
+      return store.increment(key, ADMIN_RATE_LIMIT_WINDOW_SECONDS);
     },
     async reset() {
       await store.reset(key);
