@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { UploadForm } from './UploadForm';
 import { AdminAccessPanel } from './media/AdminAccessPanel';
+import { AdminActionModal, AdminActionTarget, AdminActionType } from './media/AdminActionModal';
 import { BreadcrumbNav } from './media/BreadcrumbNav';
 import {
   ADMIN_SESSION_DURATION_MS,
@@ -20,22 +21,12 @@ import { MediaPreviewModal } from './media/MediaPreviewModal';
 import { MediaSection } from './media/MediaSection';
 import { MessageToast } from './media/MessageToast';
 import { PathOverview } from './media/PathOverview';
+import { getDepth, sanitizeName, sanitizePath } from './media/sanitize';
 import { FolderItem, MediaFile, MediaResponse, MessageTone } from './media/types';
 
 type FilterOption = 'all' | 'image' | 'video';
 
 type Breadcrumb = { label: string; key: string };
-
-// 移除雜訊字元後再建立乾淨的路徑，避免 R2 Key 異常或被注入
-const sanitizeName = (value: string) => value.replace(/[<>:"/\\|?*]+/g, '').trim();
-const sanitizePath = (value: string) =>
-  value
-    .split('/')
-    .map((segment) => sanitizeName(segment))
-    .filter(Boolean)
-    .join('/');
-
-const getDepth = (path: string) => (path ? path.split('/').filter(Boolean).length : 0);
 
 export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [adminToken, setAdminToken] = useState('');
@@ -54,6 +45,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [filter, setFilter] = useState<FilterOption>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [adminAction, setAdminAction] = useState<{ action: AdminActionType; target: AdminActionTarget } | null>(null);
 
   const pushMessage = (text: string, tone: MessageTone = 'info') => {
     setMessageTone(tone);
@@ -356,95 +348,86 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     }
   };
 
-  const promptRename = async (key: string, isFolder: boolean) => {
-    const allowed = await requestAdminToken('請輸入管理密碼以重新命名');
+  const openAdminActionModal = async (action: AdminActionType, key: string, isFolder: boolean) => {
+    const promptMap: Record<AdminActionType, string> = {
+      rename: '請輸入管理密碼以重新命名',
+      move: '請輸入管理密碼以移動項目',
+      delete: '請輸入管理密碼以刪除項目'
+    };
+    const allowed = await requestAdminToken(promptMap[action]);
     if (!allowed) return;
 
-    const currentName = key.split('/').pop() ?? key;
-    const extensionIndex = isFolder ? -1 : currentName.lastIndexOf('.');
-    const extension = extensionIndex > -1 ? currentName.slice(extensionIndex) : '';
-    const baseName = extension ? currentName.slice(0, extensionIndex) : currentName;
-
-    const inputName = window.prompt('輸入新名稱', baseName);
-    const sanitizedInput = sanitizeName(inputName?.trim() || '');
-    const newName = extension ? `${sanitizedInput}${extension}` : sanitizedInput;
-
-    if (!sanitizedInput || sanitizedInput === baseName) return;
-
-    if (isFolder && newName.length > MAX_FOLDER_NAME_LENGTH) {
-      pushMessage('資料夾名稱最多 30 個字', 'error');
-      return;
-    }
-
-    try {
-      const response = await authorizedFetch('/api/media', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'rename', key, newName, isFolder })
-      });
-
-      if (!response.ok) {
-        pushMessage('重新命名失敗，請稍後再試', 'error');
-        return;
-      }
-
-      pushMessage('已更新名稱', 'success');
-      await loadMedia(currentPrefix);
-    } catch (error) {
-      pushMessage('重新命名時發生錯誤，請稍後再試。', 'error');
-    }
+    setAdminAction({ action, target: { key, isFolder } });
   };
 
-  const handleMove = async (key: string, isFolder: boolean) => {
-    const allowed = await requestAdminToken('請輸入管理密碼以移動項目');
-    if (!allowed) return;
+  const handleAdminActionConfirm = async (payload: {
+    action: AdminActionType;
+    key: string;
+    isFolder: boolean;
+    newName?: string;
+    targetPrefix?: string;
+  }) => {
+    if (payload.action === 'rename') {
+      if (!payload.newName) return;
+      try {
+        const response = await authorizedFetch('/api/media', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'rename',
+            key: payload.key,
+            newName: payload.newName,
+            isFolder: payload.isFolder
+          })
+        });
 
-    const rawInput = window.prompt('輸入目標路徑（例如：albums/2024）', currentPrefix);
-    if (rawInput === null) return;
+        if (!response.ok) {
+          pushMessage('重新命名失敗，請稍後再試', 'error');
+          return;
+        }
 
-    const targetPrefix = sanitizePath(rawInput.trim());
-
-    if (getDepth(targetPrefix) > MAX_FOLDER_DEPTH) {
-      pushMessage('資料夾層數最多兩層，請選擇較淺的目標路徑', 'error');
-      return;
-    }
-
-    if (isFolder && getDepth(targetPrefix) + 1 > MAX_FOLDER_DEPTH) {
-      pushMessage('移動後會超過資料夾層數上限（2 層）', 'error');
-      return;
-    }
-
-    try {
-      const response = await authorizedFetch('/api/media', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'move', key, targetPrefix, isFolder })
-      });
-
-      if (!response.ok) {
-        pushMessage('移動失敗，請稍後再試', 'error');
-        return;
+        pushMessage('已更新名稱', 'success');
+        setAdminAction(null);
+        await loadMedia(currentPrefix);
+      } catch (error) {
+        pushMessage('重新命名時發生錯誤，請稍後再試。', 'error');
       }
-
-      pushMessage('已移動完成', 'success');
-      await loadMedia(targetPrefix || currentPrefix);
-    } catch (error) {
-      pushMessage('移動時發生錯誤，請稍後再試。', 'error');
+      return;
     }
-  };
 
-  const handleDelete = async (key: string, isFolder: boolean) => {
-    const allowed = await requestAdminToken('請輸入管理密碼以刪除項目');
-    if (!allowed) return;
+    if (payload.action === 'move') {
+      if (payload.targetPrefix === undefined) return;
+      try {
+        const response = await authorizedFetch('/api/media', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'move',
+            key: payload.key,
+            targetPrefix: payload.targetPrefix,
+            isFolder: payload.isFolder
+          })
+        });
 
-    const confirmed = window.confirm(`確定要刪除${isFolder ? '資料夾與其內容' : '檔案'}嗎？`);
-    if (!confirmed) return;
+        if (!response.ok) {
+          pushMessage('移動失敗，請稍後再試', 'error');
+          return;
+        }
+
+        pushMessage('已移動完成', 'success');
+        setAdminAction(null);
+        await loadMedia(payload.targetPrefix || currentPrefix);
+      } catch (error) {
+        pushMessage('移動時發生錯誤，請稍後再試。', 'error');
+      }
+      return;
+    }
 
     try {
       const response = await authorizedFetch('/api/media', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete', key, isFolder })
+        body: JSON.stringify({ action: 'delete', key: payload.key, isFolder: payload.isFolder })
       });
 
       if (!response.ok) {
@@ -453,6 +436,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       }
 
       pushMessage('已刪除', 'success');
+      setAdminAction(null);
       await loadMedia(currentPrefix);
     } catch (error) {
       pushMessage('刪除時發生錯誤，請稍後再試。', 'error');
@@ -520,9 +504,9 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         folders={folders}
         isAdmin={isAdmin}
         onEnter={handleEnterFolder}
-        onRename={(key) => promptRename(key, true)}
-        onMove={(key) => handleMove(key, true)}
-        onDelete={(key) => handleDelete(key, true)}
+        onRename={(key) => openAdminActionModal('rename', key, true)}
+        onMove={(key) => openAdminActionModal('move', key, true)}
+        onDelete={(key) => openAdminActionModal('delete', key, true)}
       />
 
       <MediaSection
@@ -533,9 +517,9 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         totalPages={totalPages}
         onPageChange={setCurrentPage}
         onSelect={setSelectedMedia}
-        onRename={(key) => promptRename(key, false)}
-        onMove={(key) => handleMove(key, false)}
-        onDelete={(key) => handleDelete(key, false)}
+        onRename={(key) => openAdminActionModal('rename', key, false)}
+        onMove={(key) => openAdminActionModal('move', key, false)}
+        onDelete={(key) => openAdminActionModal('delete', key, false)}
         filterLabel={filterLabel}
         filter={filter}
         filterVisible={filterVisible}
@@ -545,6 +529,19 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         onSearchChange={setSearchQuery}
         isAdmin={isAdmin}
         itemsPerPage={ITEMS_PER_PAGE}
+      />
+
+      <AdminActionModal
+        action={adminAction?.action ?? null}
+        target={adminAction?.target ?? null}
+        currentPrefix={currentPrefix}
+        maxDepth={MAX_FOLDER_DEPTH}
+        maxNameLength={MAX_FOLDER_NAME_LENGTH}
+        sanitizeName={sanitizeName}
+        sanitizePath={sanitizePath}
+        getDepth={getDepth}
+        onCancel={() => setAdminAction(null)}
+        onConfirm={handleAdminActionConfirm}
       />
 
       <MediaPreviewModal media={selectedMedia} onClose={() => setSelectedMedia(null)} />
