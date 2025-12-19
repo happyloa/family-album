@@ -46,6 +46,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [adminAction, setAdminAction] = useState<{ action: AdminActionType; target: AdminActionTarget } | null>(null);
+  const previewTriggerRef = useRef<HTMLElement | null>(null);
 
   const pushMessage = (text: string, tone: MessageTone = 'info') => {
     setMessageTone(tone);
@@ -516,7 +517,10 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
-        onSelect={setSelectedMedia}
+        onSelect={(file, trigger) => {
+          previewTriggerRef.current = trigger;
+          setSelectedMedia(file);
+        }}
         onRename={(key) => openAdminActionModal('rename', key, false)}
         onMove={(key) => openAdminActionModal('move', key, false)}
         onDelete={(key) => openAdminActionModal('delete', key, false)}
@@ -544,7 +548,11 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         onConfirm={handleAdminActionConfirm}
       />
 
-      <MediaPreviewModal media={selectedMedia} onClose={() => setSelectedMedia(null)} />
+      <MediaPreviewModal
+        media={selectedMedia}
+        onClose={() => setSelectedMedia(null)}
+        triggerElement={previewTriggerRef.current}
+      />
     </section>
   );
 }

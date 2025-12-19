@@ -30,7 +30,7 @@ export function MediaSection({
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
-  onSelect: (file: MediaFile) => void;
+  onSelect: (file: MediaFile, trigger: HTMLElement) => void;
   onRename: (key: string) => void;
   onMove: (key: string) => void;
   onDelete: (key: string) => void;
@@ -123,11 +123,11 @@ export function MediaSection({
           <article
             key={item.key}
             className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 shadow-lg transition hover:-translate-y-1 hover:border-cyan-400/50"
-            onClick={() => onSelect(item)}
+            onClick={(event) => onSelect(item, event.currentTarget)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                onSelect(item);
+                onSelect(item, event.currentTarget);
               }
             }}
             role="button"
