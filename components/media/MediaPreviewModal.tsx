@@ -1,9 +1,87 @@
 'use client';
 
 import Image from 'next/image';
+import { useEffect, useId, useRef } from 'react';
 import { MediaFile } from './types';
 
-export function MediaPreviewModal({ media, onClose }: { media: MediaFile | null; onClose: () => void }) {
+export function MediaPreviewModal({
+  media,
+  onClose,
+  triggerElement
+}: {
+  media: MediaFile | null;
+  onClose: () => void;
+  triggerElement?: HTMLElement | null;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  const descriptionId = useId();
+  const mediaName = media?.key.split('/').pop() ?? '';
+
+  useEffect(() => {
+    if (!media) return;
+
+    const previouslyFocused = triggerElement ?? (document.activeElement as HTMLElement | null);
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const focusableElements = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, video[controls], [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => !element.hasAttribute('disabled') && element.getAttribute('aria-hidden') !== 'true');
+
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (!active || !dialog.contains(active)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+        return;
+      }
+
+      if (event.shiftKey) {
+        if (active === first) {
+          event.preventDefault();
+          last.focus();
+        }
+        return;
+      }
+
+      if (active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+        previouslyFocused.focus();
+      }
+    };
+  }, [media, onClose, triggerElement]);
+
   if (!media) return null;
 
   return (
@@ -12,15 +90,23 @@ export function MediaPreviewModal({ media, onClose }: { media: MediaFile | null;
       onClick={onClose}
       role="dialog"
       aria-modal="true"
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
     >
       <div
         className="relative max-h-[90vh] w-[min(1100px,92vw)] overflow-hidden rounded-3xl border border-slate-700 bg-slate-900/95 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
+        ref={dialogRef}
       >
         <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-white">{media.key.split('/').pop()}</p>
+            <p className="text-sm font-semibold text-white" id={titleId}>
+              {mediaName}
+            </p>
             {media.size && <p className="text-xs text-slate-400">{(media.size / 1024 / 1024).toFixed(2)} MB</p>}
+            <p className="sr-only" id={descriptionId}>
+              {media.type === 'image' ? '圖片' : '影片'} 預覽{media.size ? `，大小 ${(media.size / 1024 / 1024).toFixed(2)} MB` : ''}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <a
@@ -35,6 +121,7 @@ export function MediaPreviewModal({ media, onClose }: { media: MediaFile | null;
               className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 whitespace-nowrap"
               type="button"
               onClick={onClose}
+              ref={closeButtonRef}
             >
               關閉
             </button>
