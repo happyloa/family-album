@@ -8,6 +8,7 @@
 - 管理作業（建立、重新命名、移動、刪除）須提供管理密碼並遵守最多兩層的資料夾限制。
 - 上傳支援圖片與影片，並在瀏覽器端自動嘗試壓縮以節省流量，上傳完成會刷新清單。
 - 管理模式僅保留於當前分頁的瀏覽器工作階段：閒置 15 分鐘或關閉分頁會自動登出，並且每次進行管理操作前都會要求再次輸入密碼以縮短密碼暴露時間。
+- 管理密碼錯誤會觸發每 IP 限流（預設 5 次 / 5 分鐘），並在介面提示剩餘嘗試次數或鎖定等待時間。
 - 支援媒體篩選器，可快速切換僅看圖片、僅看影片或全部媒體。
 
 ## 開發指引
@@ -42,9 +43,10 @@
      - `R2_ACCOUNT_ID`
      - `R2_ACCESS_KEY_ID`
      - `R2_SECRET_ACCESS_KEY`
-     - `R2_BUCKET_NAME`
-     - `R2_PUBLIC_BASE`
-     - `ADMIN_ACCESS_TOKEN`（長度最多 15 個字，寫入 API 皆須帶上 `x-admin-token` 標頭；不要儲存在公開書籤或共用裝置，以降低洩漏風險）
+    - `R2_BUCKET_NAME`
+    - `R2_PUBLIC_BASE`
+    - `ADMIN_ACCESS_TOKEN`（長度最多 15 個字，寫入 API 皆須帶上 `x-admin-token` 標頭；不要儲存在公開書籤或共用裝置，以降低洩漏風險）
+    - `ADMIN_RATE_LIMIT_MAX_FAILURES`（可選，管理密碼允許的失敗次數；未設定則使用 5 次 / 5 分鐘的預設限制）
    - 若透過 Pages Build，確保在「Environment Variables」與「Project settings → Build system → R2 bindings」一致。
 4. **CORS 與檔案型態**：
    - 如果要在瀏覽器直接存取媒體，請在 R2 bucket CORS 規則加入允許 `GET, HEAD, OPTIONS`，並允許 `Content-Type` 標頭。
@@ -59,3 +61,4 @@
 - 預設僅提供瀏覽功能，若要啟用建立、上傳、移動與刪除，請在介面輸入 `ADMIN_ACCESS_TOKEN` 對應的管理密碼即可。
 - 資料夾結構限制為兩層，資料夾名稱最長 30 字，相關驗證已內建於前端操作。
 - 管理密碼欄位限制為 15 個字，輸入更長會被拒絕，請在設定環境變數時一併遵守此長度。
+- 管理密碼錯誤會觸發每 IP 限流；可綁定 Cloudflare KV（`ADMIN_RATE_LIMIT_KV`）以跨節點共享計數，未綁定則使用記憶體暫存。

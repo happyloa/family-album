@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 
 import { getBucketUsage } from '@/lib/r2';
+import {
+  ADMIN_RATE_LIMIT_MAX_FAILURES,
+  ADMIN_RATE_LIMIT_WINDOW_MS,
+  AdminRateLimiter,
+  createAdminRateLimiter
+} from '@/lib/admin-rate-limit';
 
 // Edge runtime to align with other R2 operations
 export const runtime = 'edge';
 
-function ensureAdmin(request: Request) {
+async function ensureAdmin(request: Request, rateLimiter: AdminRateLimiter) {
   const adminToken = process.env.ADMIN_ACCESS_TOKEN;
   if (!adminToken) {
     console.error('Missing ADMIN_ACCESS_TOKEN');
@@ -14,15 +20,28 @@ function ensureAdmin(request: Request) {
 
   const providedToken = request.headers.get('x-admin-token');
   if (!providedToken || providedToken !== adminToken) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const failures = await rateLimiter.recordFailure();
+    const retryAfterMinutes = Math.ceil(ADMIN_RATE_LIMIT_WINDOW_MS / 60000);
+    if (failures >= ADMIN_RATE_LIMIT_MAX_FAILURES) {
+      return NextResponse.json(
+        { error: `因密碼輸入不正確，請於 ${retryAfterMinutes} 分鐘後再試。`, retryAfterMinutes },
+        { status: 429 }
+      );
+    }
+    const remainingAttempts = Math.max(ADMIN_RATE_LIMIT_MAX_FAILURES - failures, 0);
+    return NextResponse.json({ error: 'Unauthorized', remainingAttempts }, { status: 401 });
   }
 
+  await rateLimiter.reset();
   return null;
 }
 
 export async function GET(request: Request) {
   try {
-    const authError = ensureAdmin(request);
+    const rateLimiter = createAdminRateLimiter(request);
+    const rateLimitError = await rateLimiter.check();
+    if (rateLimitError) return rateLimitError;
+    const authError = await ensureAdmin(request, rateLimiter);
     if (authError) return authError;
 
     const usage = await getBucketUsage();
