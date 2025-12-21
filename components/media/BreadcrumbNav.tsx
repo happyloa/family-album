@@ -47,7 +47,7 @@ export function BreadcrumbNav({
                 return (
                   <li key={crumb.key} className="flex items-center gap-2">
                     <button
-                      className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 transition focus:outline-none focus:ring-2 focus:ring-emerald-400/50 ${
+                      className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-1.5 transition focus:outline-none focus:ring-2 focus:ring-emerald-400/50 ${
                         isLast
                           ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-50 shadow-glow'
                           : 'border-slate-700 bg-slate-900/60 text-slate-100 hover:border-emerald-300 hover:text-emerald-100'
@@ -76,7 +76,7 @@ export function BreadcrumbNav({
 
         <div className="flex flex-wrap items-center gap-2 md:justify-end">
           <button
-            className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-emerald-400 hover:text-emerald-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             onClick={onBack}
             disabled={!currentPrefix}
             type="button"
@@ -84,7 +84,7 @@ export function BreadcrumbNav({
             ← 返回上一層
           </button>
           <button
-            className="rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
+            className="rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
             onClick={onRefresh}
             disabled={loading}
             type="button"

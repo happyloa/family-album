@@ -52,7 +52,7 @@ export function FolderGrid({
             {isAdmin && (
               <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
                 <button
-                  className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
+                  className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700 cursor-pointer"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -62,7 +62,7 @@ export function FolderGrid({
                   重新命名
                 </button>
                 <button
-                  className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
+                  className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700 cursor-pointer"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -72,7 +72,7 @@ export function FolderGrid({
                   移動
                 </button>
                 <button
-                  className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40"
+                  className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40 cursor-pointer"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();

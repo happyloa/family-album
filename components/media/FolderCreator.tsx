@@ -28,7 +28,7 @@ export function FolderCreator({
           onChange={(event) => onChange(event.target.value)}
         />
         <button
-          className="inline-flex h-full min-h-[52px] items-center justify-center rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
+          className="inline-flex h-full min-h-[52px] cursor-pointer items-center justify-center rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
           type="button"
           onClick={onSubmit}
         >
