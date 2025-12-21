@@ -38,7 +38,7 @@ export function AdminAccessPanel({
       <div className="mt-4 space-y-3">
         {isAdmin ? (
           <button
-            className="inline-flex w-full items-center justify-center rounded-xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white shadow-lg ring-1 ring-rose-300/40 transition hover:bg-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-300/60"
+            className="inline-flex w-full items-center justify-center rounded-xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white shadow-lg ring-1 ring-rose-300/40 transition hover:bg-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-300/60 cursor-pointer"
             type="button"
             onClick={onClear}
           >
@@ -55,7 +55,7 @@ export function AdminAccessPanel({
               onChange={(event) => onInputChange(event.target.value)}
             />
             <button
-              className="rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-cyan-300 hover:to-emerald-300"
+              className="rounded-lg bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-cyan-300 hover:to-emerald-300 cursor-pointer"
               type="button"
               onClick={onValidate}
             >

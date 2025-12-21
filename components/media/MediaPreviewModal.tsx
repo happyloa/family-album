@@ -118,7 +118,7 @@ export function MediaPreviewModal({
               在新分頁開啟
             </a>
             <button
-              className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 whitespace-nowrap"
+              className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 cursor-pointer whitespace-nowrap"
               type="button"
               onClick={onClose}
               ref={closeButtonRef}

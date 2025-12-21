@@ -94,7 +94,7 @@ export function MediaSection({
               {filters.map(({ key, label }) => (
                 <button
                   key={key}
-                  className={`rounded-lg border px-3 py-1.5 transition ${
+                  className={`rounded-lg border px-3 py-1.5 transition cursor-pointer ${
                     filter === key
                       ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-50 shadow-glow'
                       : 'border-slate-700 bg-slate-800 text-slate-100 hover:border-emerald-300 hover:text-emerald-100'
@@ -147,7 +147,7 @@ export function MediaSection({
               {isAdmin && (
                 <div className="flex flex-wrap items-center gap-2">
                   <button
-                    className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
+                    className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700 cursor-pointer"
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -157,7 +157,7 @@ export function MediaSection({
                     重新命名
                   </button>
                   <button
-                    className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
+                    className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700 cursor-pointer"
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -167,7 +167,7 @@ export function MediaSection({
                     移動
                   </button>
                   <button
-                    className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40"
+                    className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40 cursor-pointer"
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -185,7 +185,7 @@ export function MediaSection({
       {files.length > itemsPerPage && (
         <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-sm text-slate-100">
           <button
-            className="rounded-lg border border-slate-700 px-3 py-1.5 font-semibold transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-slate-700 px-3 py-1.5 font-semibold transition hover:border-emerald-400 hover:text-emerald-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             type="button"
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
@@ -196,7 +196,7 @@ export function MediaSection({
             第 {currentPage} / {totalPages} 頁
           </span>
           <button
-            className="rounded-lg border border-slate-700 px-3 py-1.5 font-semibold transition hover:border-emerald-400 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg border border-slate-700 px-3 py-1.5 font-semibold transition hover:border-emerald-400 hover:text-emerald-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             type="button"
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
