@@ -426,6 +426,43 @@ function buildUniqueFileName(baseName: string, extension: string, existingNames:
   return candidate;
 }
 
+function buildUniqueFileNameForConflict(fileName: string, existingNames: Set<string>) {
+  const extension = extractExtension(fileName);
+  const baseName = removeTrailingExtension(fileName, extension);
+  return buildUniqueFileName(baseName, extension, existingNames);
+}
+
+async function listExistingFileNames(prefix: string, options: { excludeKey?: string } = {}) {
+  const listing = await listMedia(prefix);
+  const existingNames = new Set<string>();
+
+  for (const file of listing.files) {
+    if (options.excludeKey && file.key === options.excludeKey) continue;
+    const name = file.key.split('/').pop();
+    if (name) existingNames.add(name);
+  }
+
+  return existingNames;
+}
+
+async function listExistingFileNamesByFolder(prefix: string) {
+  const existingNamesByFolder = new Map<string, Set<string>>();
+  const keys = await collectKeys(prefix, { includePrefixObject: true });
+
+  for (const key of keys) {
+    if (key.endsWith('/')) continue;
+    const segments = key.split('/');
+    const name = segments.pop();
+    if (!name) continue;
+    const folderPath = segments.join('/');
+    const names = existingNamesByFolder.get(folderPath) ?? new Set<string>();
+    names.add(name);
+    existingNamesByFolder.set(folderPath, names);
+  }
+
+  return existingNamesByFolder;
+}
+
 export async function renameFile(key: string, newName: string) {
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
@@ -513,13 +550,16 @@ export async function deleteFolder(prefix: string, options: { moveContentsToPare
 
   if (options.moveContentsToParent) {
     const safeParentPrefix = sanitizePath(parentPrefix);
+    const existingNames = await listExistingFileNames(safeParentPrefix);
     const filesToMove = keys.filter((key) => !key.endsWith('/'));
 
     for (const sourceKey of filesToMove) {
       const filename = sourceKey.split('/').pop();
       if (!filename) continue;
 
-      const targetKey = safeParentPrefix ? `${safeParentPrefix}/${filename}` : filename;
+      const resolvedName = buildUniqueFileNameForConflict(filename, existingNames);
+      existingNames.add(resolvedName);
+      const targetKey = safeParentPrefix ? `${safeParentPrefix}/${resolvedName}` : resolvedName;
       if (targetKey === sourceKey) continue;
 
       await copyObjectWithinBucket(sourceKey, targetKey);
@@ -535,7 +575,13 @@ export async function moveFile(key: string, targetPrefix: string) {
   if (!filename) throw new Error('Invalid file name');
 
   const safeTargetPrefix = sanitizePath(targetPrefix);
-  const newKey = safeTargetPrefix ? `${safeTargetPrefix}/${filename}` : filename;
+  const existingNames = await listExistingFileNames(safeTargetPrefix, { excludeKey: normalizedKey });
+  const resolvedName = buildUniqueFileNameForConflict(filename, existingNames);
+  const newKey = safeTargetPrefix ? `${safeTargetPrefix}/${resolvedName}` : resolvedName;
+
+  if (newKey === normalizedKey) {
+    return { key: newKey, url: encodeKeyForUrl(newKey, env.R2_PUBLIC_BASE), type: inferType(newKey) } satisfies MediaFile;
+  }
 
   await copyObjectWithinBucket(normalizedKey, newKey);
 
@@ -560,10 +606,26 @@ export async function moveFolder(key: string, targetPrefix: string) {
   const targetPrefixKey = buildFolderKey(targetFolderPath);
 
   const keys = await collectKeys(normalizedKey, { includePrefixObject: true });
+  const existingNamesByFolder = await listExistingFileNamesByFolder(targetFolderPath);
 
   for (const sourceKey of keys) {
     const targetKey = sourceKey.replace(sourcePrefix, targetPrefixKey);
-    await copyObjectWithinBucket(sourceKey, targetKey);
+    if (sourceKey.endsWith('/')) {
+      await copyObjectWithinBucket(sourceKey, targetKey);
+      continue;
+    }
+
+    const segments = targetKey.split('/');
+    const fileName = segments.pop();
+    if (!fileName) continue;
+    const targetFolder = segments.join('/');
+    const existingNames = existingNamesByFolder.get(targetFolder) ?? new Set<string>();
+    const resolvedName = buildUniqueFileNameForConflict(fileName, existingNames);
+    existingNames.add(resolvedName);
+    existingNamesByFolder.set(targetFolder, existingNames);
+    const resolvedTargetKey = targetFolder ? `${targetFolder}/${resolvedName}` : resolvedName;
+
+    await copyObjectWithinBucket(sourceKey, resolvedTargetKey);
   }
 
   await deleteObjects(keys);
