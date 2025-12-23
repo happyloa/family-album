@@ -1,6 +1,11 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  MAX_IMAGE_SIZE_MB,
+  MAX_VIDEO_SIZE_MB,
+  getSizeLimitByMime
+} from '@/lib/upload/constants';
 
 export function UploadForm({
   onUploaded,
@@ -25,10 +30,6 @@ export function UploadForm({
   const resetFeedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const MAX_TOTAL_SIZE_MB = 400;
-  const MAX_SINGLE_SIZE_MB = (() => {
-    const envValue = Number(process.env.NEXT_PUBLIC_MAX_SINGLE_SIZE_MB);
-    return Number.isFinite(envValue) && envValue > 0 ? envValue : 150;
-  })();
   const BUCKET_LIMIT_BYTES = 10 * 1024 * 1024 * 1024; // 10GB
 
   const updateStatus = (text: string, tone: 'info' | 'success' | 'error' = 'info') => {
@@ -55,6 +56,14 @@ export function UploadForm({
     const value = bytes / 1024 ** index;
     return `${value.toFixed(value >= 10 ? 0 : 2)}${units[index]}`;
   };
+
+  const formatSizeLabel = (sizeMb: number) => {
+    if (!Number.isFinite(sizeMb)) return '';
+    return Number.isInteger(sizeMb) ? `${sizeMb}MB` : `${sizeMb.toFixed(1)}MB`;
+  };
+
+  const imageSizeLabel = formatSizeLabel(MAX_IMAGE_SIZE_MB);
+  const videoSizeLabel = formatSizeLabel(MAX_VIDEO_SIZE_MB);
 
   const refreshBucketUsage = useCallback(async () => {
     setUsageLoading(true);
@@ -145,9 +154,15 @@ export function UploadForm({
     }
 
     const totalSizeBytes = files.reduce((sum, file) => sum + file.size, 0);
-    const oversized = files.filter((file) => file.size > MAX_SINGLE_SIZE_MB * 1024 * 1024);
+    const oversized = files.filter((file) => {
+      const limit = getSizeLimitByMime(file.type);
+      return typeof limit === 'number' && file.size > limit;
+    });
     if (oversized.length > 0) {
-      updateStatus(`有 ${oversized.length} 個檔案超過 ${MAX_SINGLE_SIZE_MB}MB，請調整後再上傳。`, 'error');
+      updateStatus(
+        `有 ${oversized.length} 個檔案超過大小上限（圖片 ${imageSizeLabel}、影片 ${videoSizeLabel}），請調整後再上傳。`,
+        'error'
+      );
       return;
     }
 
@@ -290,8 +305,14 @@ export function UploadForm({
             const rawFiles = Array.from(event.target.files ?? []);
             const selected = rawFiles.filter((media) => media.type.startsWith('image/') || media.type.startsWith('video/'));
             const skippedByType = rawFiles.length - selected.length;
-            const oversized = selected.filter((file) => file.size > MAX_SINGLE_SIZE_MB * 1024 * 1024);
-            const valid = selected.filter((file) => file.size <= MAX_SINGLE_SIZE_MB * 1024 * 1024);
+            const oversized = selected.filter((file) => {
+              const limit = getSizeLimitByMime(file.type);
+              return typeof limit === 'number' && file.size > limit;
+            });
+            const valid = selected.filter((file) => {
+              const limit = getSizeLimitByMime(file.type);
+              return typeof limit === 'number' && file.size <= limit;
+            });
             const totalSizeBytes = valid.reduce((sum, file) => sum + file.size, 0);
 
             if (totalSizeBytes > MAX_TOTAL_SIZE_MB * 1024 * 1024) {
@@ -302,12 +323,15 @@ export function UploadForm({
 
             const hints: string[] = [];
             if (skippedByType > 0) hints.push(`已略過 ${skippedByType} 個不符合格式的檔案`);
-            if (oversized.length > 0) hints.push(`${oversized.length} 個超過 ${MAX_SINGLE_SIZE_MB}MB 已跳過`);
+            if (oversized.length > 0) {
+              hints.push(`${oversized.length} 個超過大小上限（圖片 ${imageSizeLabel}、影片 ${videoSizeLabel}）已跳過`);
+            }
 
             updateStatus(hints.join('；'), oversized.length > 0 ? 'error' : 'info');
             setFiles(valid);
           }}
         />
+        <p className="text-xs text-slate-400">圖片上限 {imageSizeLabel}，影片上限 {videoSizeLabel}（依設定值）。</p>
         {files.length > 0 && (
           <div className="space-y-1 text-emerald-200">
             <p className="font-semibold">已選擇 {files.length} 個檔案：</p>

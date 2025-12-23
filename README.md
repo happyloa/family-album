@@ -47,9 +47,10 @@
        - `R2_BUCKET_NAME`
        - `R2_PUBLIC_BASE`
        - `ADMIN_ACCESS_TOKEN`（長度最多 15 個字，寫入 API 皆須帶上 `x-admin-token` 標頭；不要儲存在公開書籤或共用裝置，以降低洩漏風險）
-     - 選填
-       - `ADMIN_RATE_LIMIT_MAX_FAILURES`（管理密碼允許的失敗次數；未設定則使用 5 次 / 5 分鐘的預設限制）
-       - `MAX_SINGLE_SIZE_MB`（單檔上傳大小上限，預設 150MB；若要前端同步提示，請同時設定 `NEXT_PUBLIC_MAX_SINGLE_SIZE_MB`）
+      - 選填
+        - `ADMIN_RATE_LIMIT_MAX_FAILURES`（管理密碼允許的失敗次數；未設定則使用 5 次 / 5 分鐘的預設限制）
+        - `MAX_IMAGE_SIZE_MB`（圖片上傳大小上限，預設 10MB；若要前端同步提示，請同時設定 `NEXT_PUBLIC_MAX_IMAGE_SIZE_MB`）
+        - `MAX_SINGLE_SIZE_MB`（影片上傳大小上限，預設 150MB；若要前端同步提示，請同時設定 `NEXT_PUBLIC_MAX_SINGLE_SIZE_MB`）
    - 若透過 Pages Build，確保在「Environment Variables」與「Project settings → Build system → R2 bindings」一致。
 4. **CORS 與檔案型態**：
    - 如果要在瀏覽器直接存取媒體，請在 R2 bucket CORS 規則加入允許 `GET, HEAD, OPTIONS`，並允許 `Content-Type` 標頭。
