@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockFetch = vi.fn();
 
-vi.mock('aws4fetch', () => ({
-  AwsClient: vi.fn(() => ({
-    fetch: mockFetch
-  }))
-}));
+vi.mock('aws4fetch', () => {
+  class AwsClient {
+    fetch = mockFetch;
+  }
+
+  return { AwsClient };
+});
 
 const setEnv = () => {
   process.env.R2_ACCOUNT_ID = 'acc';
