@@ -19,6 +19,7 @@ import { FolderCreator } from './media/FolderCreator';
 import { FolderGrid } from './media/FolderGrid';
 import { MediaPreviewModal } from './media/MediaPreviewModal';
 import { MediaSection } from './media/MediaSection';
+import { MediaSkeleton } from './media/MediaSkeleton';
 import { MessageToast } from './media/MessageToast';
 import { PathOverview } from './media/PathOverview';
 import { getDepth, sanitizeName, sanitizePath } from './media/sanitize';
@@ -495,45 +496,47 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         depth={depth}
       />
 
-      {loading && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 px-4 py-3 text-sm text-slate-200">正在載入媒體…</div>
+      {loading ? (
+        <MediaSkeleton />
+      ) : (
+        <>
+          {!hasItems && <EmptyState atMaxDepth={depth >= MAX_FOLDER_DEPTH} />}
+
+          <FolderGrid
+            folders={folders}
+            isAdmin={isAdmin}
+            onEnter={handleEnterFolder}
+            onRename={(key) => openAdminActionModal('rename', key, true)}
+            onMove={(key) => openAdminActionModal('move', key, true)}
+            onDelete={(key) => openAdminActionModal('delete', key, true)}
+          />
+
+          <MediaSection
+            allFilesCount={files.length}
+            files={filteredFiles}
+            paginatedFiles={paginatedFiles}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            onSelect={(file, trigger) => {
+              previewTriggerRef.current = trigger;
+              setSelectedMedia(file);
+            }}
+            onRename={(key) => openAdminActionModal('rename', key, false)}
+            onMove={(key) => openAdminActionModal('move', key, false)}
+            onDelete={(key) => openAdminActionModal('delete', key, false)}
+            filterLabel={filterLabel}
+            filter={filter}
+            filterVisible={filterVisible}
+            onFilterChange={(value) => setFilter(value)}
+            searchEnabled={searchEnabled}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            isAdmin={isAdmin}
+            itemsPerPage={ITEMS_PER_PAGE}
+          />
+        </>
       )}
-
-      {!loading && !hasItems && <EmptyState atMaxDepth={depth >= MAX_FOLDER_DEPTH} />}
-
-      <FolderGrid
-        folders={folders}
-        isAdmin={isAdmin}
-        onEnter={handleEnterFolder}
-        onRename={(key) => openAdminActionModal('rename', key, true)}
-        onMove={(key) => openAdminActionModal('move', key, true)}
-        onDelete={(key) => openAdminActionModal('delete', key, true)}
-      />
-
-      <MediaSection
-        allFilesCount={files.length}
-        files={filteredFiles}
-        paginatedFiles={paginatedFiles}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        onSelect={(file, trigger) => {
-          previewTriggerRef.current = trigger;
-          setSelectedMedia(file);
-        }}
-        onRename={(key) => openAdminActionModal('rename', key, false)}
-        onMove={(key) => openAdminActionModal('move', key, false)}
-        onDelete={(key) => openAdminActionModal('delete', key, false)}
-        filterLabel={filterLabel}
-        filter={filter}
-        filterVisible={filterVisible}
-        onFilterChange={(value) => setFilter(value)}
-        searchEnabled={searchEnabled}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        isAdmin={isAdmin}
-        itemsPerPage={ITEMS_PER_PAGE}
-      />
 
       <AdminActionModal
         action={adminAction?.action ?? null}
