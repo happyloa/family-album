@@ -1,7 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 export type AdminActionType = 'rename' | 'move' | 'delete';
 
@@ -47,8 +47,6 @@ export function AdminActionModal({
   onCancel,
   onConfirm
 }: AdminActionModalProps) {
-  const [inputValue, setInputValue] = useState('');
-
   const currentName = useMemo(() => {
     if (!target) return '';
     return target.key.split('/').pop() ?? target.key;
@@ -63,16 +61,14 @@ export function AdminActionModal({
     return { baseName: currentName, extension: '' };
   }, [currentName, target]);
 
-  useEffect(() => {
-    if (!action || !target) return;
-    if (action === 'rename') {
-      setInputValue(baseName);
-    } else if (action === 'move') {
-      setInputValue(currentPrefix);
-    } else {
-      setInputValue('');
-    }
+  const initialInputValue = useMemo(() => {
+    if (!action || !target) return '';
+    if (action === 'rename') return baseName;
+    if (action === 'move') return currentPrefix;
+    return '';
   }, [action, target, baseName, currentPrefix]);
+
+  const [inputValue, setInputValue] = useState(initialInputValue);
 
   const { errorMessage, helperMessage, sanitizedName, sanitizedPath } = useMemo(() => {
     if (!action || !target) {
