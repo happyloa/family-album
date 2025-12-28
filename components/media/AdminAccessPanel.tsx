@@ -16,7 +16,7 @@ export function AdminAccessPanel({
   onInputChange: (value: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800/80 bg-slate-900/80 p-5 shadow-lg backdrop-blur">
+    <div className="w-full rounded-2xl border border-slate-800/80 bg-slate-900/80 p-5 shadow-lg backdrop-blur">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">安全管理</p>

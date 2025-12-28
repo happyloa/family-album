@@ -21,7 +21,6 @@ import { MediaPreviewModal } from './media/MediaPreviewModal';
 import { MediaSection } from './media/MediaSection';
 import { MediaSkeleton } from './media/MediaSkeleton';
 import { MessageToast } from './media/MessageToast';
-import { PathOverview } from './media/PathOverview';
 import { getDepth, sanitizeName, sanitizePath } from './media/sanitize';
 import { FolderItem, MediaFile, MediaResponse, MessageTone } from './media/types';
 
@@ -463,8 +462,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <PathOverview currentPrefix={currentPrefix} folderCount={folders.length} fileCount={files.length} />
+        <div className="mt-6">
           <AdminAccessPanel
             isAdmin={isAdmin}
             adminInput={adminInput}
