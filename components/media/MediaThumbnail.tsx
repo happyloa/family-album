@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { MediaFile } from './types';
 
@@ -15,11 +15,19 @@ function MediaBadge({ type }: { type: MediaFile['type'] }) {
   );
 }
 
-function VideoPreview({ src, alt }: { src: string; alt: string }) {
+function VideoPreview({ src, alt, onReady }: { src: string; alt: string; onReady: () => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [canPreview, setCanPreview] = useState(true);
+  const hasNotifiedRef = useRef(false);
+
+  const notifyReady = useCallback(() => {
+    if (hasNotifiedRef.current) return;
+    hasNotifiedRef.current = true;
+    onReady();
+  }, [onReady]);
 
   useEffect(() => {
+    hasNotifiedRef.current = false;
     const video = videoRef.current;
     if (!video) return undefined;
 
@@ -33,9 +41,11 @@ function VideoPreview({ src, alt }: { src: string; alt: string }) {
         // iOS/Safari 需要觸發 play() 才會渲染第一幀，若失敗則改用備援畫面
         await video.play();
         setCanPreview(true);
+        // 完成第一幀渲染後再交由 canplay 事件觸發 ready 通知
       } catch (error) {
         console.warn('Video preview fallback:', error);
         setCanPreview(false);
+        notifyReady();
       }
     };
 
@@ -45,7 +55,7 @@ function VideoPreview({ src, alt }: { src: string; alt: string }) {
       video.removeAttribute('src');
       video.load();
     };
-  }, [src]);
+  }, [src, notifyReady]);
 
   if (!canPreview) {
     return (
@@ -68,17 +78,42 @@ function VideoPreview({ src, alt }: { src: string; alt: string }) {
       loop
       preload="metadata"
       aria-label={alt}
+      onCanPlay={notifyReady}
+      onLoadedData={notifyReady}
+      onError={notifyReady}
     />
   );
 }
 
 export function MediaThumbnail({ media }: { media: MediaFile }) {
+  const [loadedUrl, setLoadedUrl] = useState('');
+  const isLoaded = loadedUrl === media.url;
+  const handleReady = useCallback(() => setLoadedUrl(media.url), [media.url]);
+
   return (
     <div className="relative aspect-[4/3] overflow-hidden bg-slate-900">
+      {!isLoaded && (
+        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span
+              className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-300/70 border-t-transparent"
+              aria-hidden="true"
+            />
+          </div>
+        </div>
+      )}
       {media.type === 'image' ? (
-        <Image src={media.url} alt={media.key} fill className="object-cover" sizes="(min-width: 1280px) 25vw, 50vw" />
+        <Image
+          src={media.url}
+          alt={media.key}
+          fill
+          className={`object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+          sizes="(min-width: 1280px) 25vw, 50vw"
+          onLoadingComplete={handleReady}
+          onError={handleReady}
+        />
       ) : (
-        <VideoPreview src={media.url} alt={media.key} />
+        <VideoPreview src={media.url} alt={media.key} onReady={handleReady} />
       )}
       <MediaBadge type={media.type} />
     </div>

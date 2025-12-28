@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { MediaFile } from './types';
 
 export function MediaPreviewModal({
@@ -18,6 +18,13 @@ export function MediaPreviewModal({
   const titleId = useId();
   const descriptionId = useId();
   const mediaName = media?.key.split('/').pop() ?? '';
+  const [loadedUrl, setLoadedUrl] = useState('');
+  const isLoaded = media ? loadedUrl === media.url : false;
+  const markLoaded = () => {
+    if (media?.url) {
+      setLoadedUrl(media.url);
+    }
+  };
 
   useEffect(() => {
     if (!media) return;
@@ -129,10 +136,38 @@ export function MediaPreviewModal({
         </div>
         <div className="relative flex items-center justify-center bg-slate-950/60 p-4 sm:p-6">
           <div className="relative aspect-[16/10] w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-800 bg-black">
+            {!isLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-950/60">
+                <span
+                  className="h-12 w-12 animate-spin rounded-full border-2 border-emerald-300/70 border-t-transparent"
+                  aria-hidden="true"
+                />
+              </div>
+            )}
             {media.type === 'image' ? (
-              <Image src={media.url} alt={media.key} fill loading="lazy" decoding="async" className="object-contain" sizes="100vw" />
+              <Image
+                src={media.url}
+                alt={media.key}
+                fill
+                loading="lazy"
+                decoding="async"
+                className={`object-contain transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                sizes="100vw"
+                onLoadingComplete={markLoaded}
+                onError={markLoaded}
+              />
             ) : (
-              <video className="h-full w-full bg-black object-contain" src={media.url} controls autoPlay preload="metadata" playsInline />
+              <video
+                className={`h-full w-full bg-black object-contain transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                src={media.url}
+                controls
+                autoPlay
+                preload="metadata"
+                playsInline
+                onCanPlay={markLoaded}
+                onLoadedData={markLoaded}
+                onError={markLoaded}
+              />
             )}
           </div>
         </div>

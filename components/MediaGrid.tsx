@@ -537,6 +537,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       )}
 
       <AdminActionModal
+        key={adminAction ? `${adminAction.action}-${adminAction.target.key}-${currentPrefix}` : 'idle'}
         action={adminAction?.action ?? null}
         target={adminAction?.target ?? null}
         currentPrefix={currentPrefix}

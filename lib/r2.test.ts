@@ -21,8 +21,8 @@ const setEnv = () => {
 const importUploadToR2 = async () => {
   vi.resetModules();
   setEnv();
-  const module = await import('./r2');
-  return module.uploadToR2;
+  const r2Module = await import('./r2');
+  return r2Module.uploadToR2;
 };
 
 beforeEach(() => {
