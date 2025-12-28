@@ -68,6 +68,14 @@
   - 密碼錯誤會以 IP 為 key 進行限流，達上限後 API 會回傳需等待的分鐘數。
 - **bucket 用量**：若提供 `CLOUDFLARE_API_TOKEN`，`/api/usage` 會直接呼叫 Cloudflare 用量 API；否則改用分頁列舉計算總容量。
 
+### 如何取得 `CLOUDFLARE_API_TOKEN`
+
+1. 進入 Cloudflare 控制台的 **My Profile → API Tokens**，點選 **Create Token**。
+2. 選用 **Get started → Create Custom Token**，在權限中加入：
+   - `Account` → `Workers R2 Storage` → `Read`（至少需要讀取，以供 `/api/usage` 查詢 bucket 用量）。
+3. 將 Token 的作用範圍（Account Resources）限制在目標帳戶後建立並複製，填入部署環境的 `CLOUDFLARE_API_TOKEN`。
+4. 若日後需要重新產生，請在同頁面 revoke 既有 Token 後再建立新的。
+
 ## API 速查
 
 | 方法 | 路徑 | 用途 | 認證 |
