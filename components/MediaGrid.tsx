@@ -560,7 +560,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             <span className="text-lg">⬆️</span>
             <span>放到上一層</span>
           </div>
-          <p className="text-xs text-emerald-100/80">將拖曳中的媒體移動到 {parentPrefix || '根目錄'}</p>
+          <p className="text-xs text-emerald-100/80">將拖曳中的媒體移動到「{parentPrefix || '根目錄'}」</p>
         </div>
       )}
 
@@ -575,7 +575,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             isAdmin={isAdmin}
             onEnter={handleEnterFolder}
             onRename={(key) => openAdminActionModal('rename', key, true)}
-            onMove={(key) => openAdminActionModal('move', key, true)}
             onDelete={(key) => openAdminActionModal('delete', key, true)}
             canDropMedia={isAdmin && isDraggingMedia}
             onDropMedia={(targetKey) => void moveDraggedMediaTo(targetKey)}
@@ -593,7 +592,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
               setSelectedMedia(file);
             }}
             onRename={(key) => openAdminActionModal('rename', key, false)}
-            onMove={(key) => openAdminActionModal('move', key, false)}
             onDelete={(key) => openAdminActionModal('delete', key, false)}
             filterLabel={filterLabel}
             filter={filter}

@@ -9,7 +9,6 @@ export function FolderGrid({
   isAdmin,
   onEnter,
   onRename,
-  onMove,
   onDelete,
   canDropMedia,
   onDropMedia
@@ -18,7 +17,6 @@ export function FolderGrid({
   isAdmin: boolean;
   onEnter: (key: string) => void;
   onRename: (key: string) => void;
-  onMove: (key: string) => void;
   onDelete: (key: string) => void;
   canDropMedia?: boolean;
   onDropMedia?: (folderKey: string) => void;
@@ -80,16 +78,6 @@ export function FolderGrid({
                   }}
                 >
                   重新命名
-                </button>
-                <button
-                  className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700 cursor-pointer"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onMove(folder.key);
-                  }}
-                >
-                  移動
                 </button>
                 <button
                   className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40 cursor-pointer"

@@ -24,7 +24,10 @@ export function MediaSkeleton() {
                   <div className="h-3 w-36 rounded bg-slate-800/70" />
                 </div>
               </div>
-              <div className="h-3 w-3/4 rounded-full bg-slate-800/80" />
+              <div className="flex flex-wrap gap-2">
+                <div className="h-6 w-16 rounded-full bg-slate-800/80" />
+                <div className="h-6 w-16 rounded-full bg-rose-800/50" />
+              </div>
             </div>
           ))}
         </div>
@@ -49,7 +52,6 @@ export function MediaSkeleton() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <div className="h-6 w-16 rounded-full bg-slate-800/80" />
-                  <div className="h-6 w-16 rounded-full bg-slate-800/70" />
                   <div className="h-6 w-16 rounded-full bg-rose-800/50" />
                 </div>
               </div>

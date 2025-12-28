@@ -14,7 +14,6 @@ export function MediaSection({
   onPageChange,
   onSelect,
   onRename,
-  onMove,
   onDelete,
   filterLabel,
   filter,
@@ -36,7 +35,6 @@ export function MediaSection({
   onPageChange: (page: number) => void;
   onSelect: (file: MediaFile, trigger: HTMLElement) => void;
   onRename: (key: string) => void;
-  onMove: (key: string) => void;
   onDelete: (key: string) => void;
   filterLabel: string;
   filter: 'all' | 'image' | 'video';
@@ -172,16 +170,6 @@ export function MediaSection({
                     }}
                   >
                     重新命名
-                  </button>
-                  <button
-                    className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700 cursor-pointer"
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onMove(item.key);
-                    }}
-                  >
-                    移動
                   </button>
                   <button
                     className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40 cursor-pointer"
