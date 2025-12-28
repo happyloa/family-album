@@ -32,6 +32,17 @@ type BucketUsage = {
   bytes: number;
 };
 
+type CloudflareUsageResult = {
+  result?: {
+    usage?: {
+      bytes?: number;
+      storage?: { class_a?: number; class_b?: number; total?: number };
+    };
+    size_bytes?: number;
+    objects?: { count?: number; bytes?: number };
+  };
+};
+
 const MAX_FILE_NAME_LENGTH = 255;
 
 const processEnv = typeof process !== 'undefined' ? process.env : undefined;
@@ -55,6 +66,8 @@ function loadEnv(): Record<EnvKeys, string> {
 }
 
 const env = loadEnv();
+
+const CLOUDFLARE_API_TOKEN = processEnv?.CLOUDFLARE_API_TOKEN;
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -155,6 +168,35 @@ function readTextNode(value: unknown): string {
 async function signedFetch(input: string, init?: RequestInit) {
   const client = getClient();
   return client.fetch(input, init);
+}
+
+async function fetchCloudflareBucketUsage() {
+  if (!CLOUDFLARE_API_TOKEN) return null;
+
+  const url = `https://api.cloudflare.com/client/v4/accounts/${env.R2_ACCOUNT_ID}/r2/buckets/${env.R2_BUCKET_NAME}/usage`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${CLOUDFLARE_API_TOKEN}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Cloudflare usage: ${response.status} ${response.statusText}`);
+  }
+
+  const data = (await response.json()) as CloudflareUsageResult;
+  const usageBytes =
+    data.result?.usage?.bytes ??
+    data.result?.usage?.storage?.total ??
+    data.result?.size_bytes ??
+    data.result?.objects?.bytes;
+
+  if (usageBytes === undefined || usageBytes === null) {
+    throw new Error('Unexpected Cloudflare usage payload');
+  }
+
+  return usageBytes;
 }
 
 function buildEndpointPath(path: string) {
@@ -316,6 +358,15 @@ export async function listMedia(prefix = ''): Promise<MediaListing> {
 }
 
 export async function getBucketUsage(): Promise<BucketUsage> {
+  try {
+    const cloudflareUsage = await fetchCloudflareBucketUsage();
+    if (cloudflareUsage !== null) {
+      return { bytes: cloudflareUsage } satisfies BucketUsage;
+    }
+  } catch (error) {
+    console.warn('Cloudflare usage lookup failed, falling back to object listing', error);
+  }
+
   let continuationToken: string | undefined;
   let totalBytes = 0;
 
