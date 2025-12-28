@@ -1,5 +1,7 @@
 'use client';
 
+import { type DragEvent } from 'react';
+
 import { MediaThumbnail } from './MediaThumbnail';
 import { MediaFile } from './types';
 
@@ -12,7 +14,6 @@ export function MediaSection({
   onPageChange,
   onSelect,
   onRename,
-  onMove,
   onDelete,
   filterLabel,
   filter,
@@ -22,7 +23,9 @@ export function MediaSection({
   searchQuery,
   onSearchChange,
   isAdmin,
-  itemsPerPage
+  itemsPerPage,
+  onDragStart,
+  onDragEnd
 }: {
   allFilesCount: number;
   files: MediaFile[];
@@ -32,7 +35,6 @@ export function MediaSection({
   onPageChange: (page: number) => void;
   onSelect: (file: MediaFile, trigger: HTMLElement) => void;
   onRename: (key: string) => void;
-  onMove: (key: string) => void;
   onDelete: (key: string) => void;
   filterLabel: string;
   filter: 'all' | 'image' | 'video';
@@ -43,6 +45,8 @@ export function MediaSection({
   onSearchChange: (value: string) => void;
   isAdmin: boolean;
   itemsPerPage: number;
+  onDragStart?: (file: MediaFile, event: DragEvent<HTMLElement>) => void;
+  onDragEnd?: () => void;
 }) {
   if (!allFilesCount) return null;
 
@@ -130,6 +134,17 @@ export function MediaSection({
                 onSelect(item, event.currentTarget);
               }
             }}
+            draggable={isAdmin}
+            onDragStart={(event) => {
+              if (!isAdmin) return;
+              event.stopPropagation();
+              event.dataTransfer.effectAllowed = 'move';
+              event.dataTransfer.setData('text/plain', item.key);
+              onDragStart?.(item, event);
+            }}
+            onDragEnd={() => {
+              onDragEnd?.();
+            }}
             role="button"
             tabIndex={0}
             aria-label={`${item.key.split('/').pop()} 預覽`}
@@ -155,16 +170,6 @@ export function MediaSection({
                     }}
                   >
                     重新命名
-                  </button>
-                  <button
-                    className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700 cursor-pointer"
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onMove(item.key);
-                    }}
-                  >
-                    移動
                   </button>
                   <button
                     className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40 cursor-pointer"

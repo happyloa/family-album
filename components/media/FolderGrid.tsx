@@ -1,5 +1,7 @@
 'use client';
 
+import { type DragEvent } from 'react';
+
 import { FolderItem } from './types';
 
 export function FolderGrid({
@@ -7,17 +9,26 @@ export function FolderGrid({
   isAdmin,
   onEnter,
   onRename,
-  onMove,
-  onDelete
+  onDelete,
+  canDropMedia,
+  onDropMedia
 }: {
   folders: FolderItem[];
   isAdmin: boolean;
   onEnter: (key: string) => void;
   onRename: (key: string) => void;
-  onMove: (key: string) => void;
   onDelete: (key: string) => void;
+  canDropMedia?: boolean;
+  onDropMedia?: (folderKey: string) => void;
 }) {
   if (!folders.length) return null;
+
+  const handleDrop = (event: DragEvent<HTMLElement>, folderKey: string) => {
+    if (!canDropMedia) return;
+    event.preventDefault();
+    event.stopPropagation();
+    onDropMedia?.(folderKey);
+  };
 
   return (
     <div className="space-y-3">
@@ -35,12 +46,19 @@ export function FolderGrid({
             role="button"
             tabIndex={0}
             onClick={() => onEnter(folder.key)}
+            onDragOver={(event) => {
+              if (!canDropMedia) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+            }}
+            onDrop={(event) => handleDrop(event, folder.key)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
                 onEnter(folder.key);
               }
             }}
+            aria-label={canDropMedia ? `將媒體移動到 ${folder.name} 資料夾` : undefined}
           >
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-2xl">📂</div>
@@ -60,16 +78,6 @@ export function FolderGrid({
                   }}
                 >
                   重新命名
-                </button>
-                <button
-                  className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700 cursor-pointer"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onMove(folder.key);
-                  }}
-                >
-                  移動
                 </button>
                 <button
                   className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40 cursor-pointer"
