@@ -1,68 +1,104 @@
 # Family Album
 
-用 Next.js 打造的家庭相簿，媒體檔案存放在 Cloudflare R2，並以雙層資料夾結構（資料夾名稱最多 30 個字）管理。專案使用 App Router，內建瀏覽 API 與上傳範例，透過管理密碼啟用建立、重新命名、移動與刪除。
+一個以 Next.js App Router 打造的家庭相簿，專注於直接管理 Cloudflare R2 的媒體。介面提供路徑導覽、圖片與影片預覽、上傳與管理工具，並以管理密碼保護寫入操作。
 
-## 功能摘要
+## 特色
 
-- 直接列出 Cloudflare R2 的媒體，顯示路徑導覽與檔案計數。
-- 管理作業（建立、重新命名、移動、刪除）須提供管理密碼並遵守最多兩層的資料夾限制。
-- 上傳支援圖片與影片，並在瀏覽器端自動嘗試壓縮以節省流量，上傳完成會刷新清單。
-- 管理模式僅保留於當前分頁的瀏覽器工作階段：閒置 15 分鐘或關閉分頁會自動登出，並且每次進行管理操作前都會要求再次輸入密碼以縮短密碼暴露時間。
-- 管理密碼錯誤會觸發每 IP 限流（預設 5 次 / 5 分鐘），並在介面提示剩餘嘗試次數或鎖定等待時間。
-- 支援媒體篩選器，可快速切換僅看圖片、僅看影片或全部媒體。
+- **雙層目錄與命名規範**：資料夾深度上限為 2 層、名稱最長 30 字，避免路徑過深或過長。
+- **管理密碼與節流**：寫入相關 API 需在 `x-admin-token` header 帶入 `ADMIN_ACCESS_TOKEN`（最長 15 字）。密碼錯誤會依 IP 進行速率限制（預設 5 次 / 5 分鐘），可接上 `ADMIN_RATE_LIMIT_KV` 讓多節點共用計數。
+- **媒體瀏覽體驗**：麵包屑導覽、資料夾格線、分頁（每頁 12 筆）、快速搜尋（檔案數超過 36 筆時啟用）以及圖片 / 影片篩選器。
+- **上傳與檔案管理**：支援多檔案上傳、拖放移動、重新命名與刪除；前端自動處理圖片壓縮並套用時間戳記檔名以降低衝突。
+- **Session 安全性**：管理模式僅儲存在當前分頁的 sessionStorage，15 分鐘未操作會自動失效，換頁或重新整理都需再輸入密碼。
+- **Cloudflare Pages 友善**：所有 API 以 Edge Runtime 實作並透過 `aws4fetch` 呼叫 R2，可直接部署到 Pages；若提供 `CLOUDFLARE_API_TOKEN` 則可查詢 bucket 使用量。
 
-## 開發指引
+## 需求與相依
 
-1. 確認環境：建議使用 Node.js 20 以上版本，並確保已安裝 npm。
-2. 安裝套件：
+- Node.js 20+ 與 npm
+- Next.js 16、React 19、TypeScript、Tailwind CSS 4
+- Cloudflare R2（含 Access Key / Secret Key）、可選的 Cloudflare API Token（用於 bucket 使用量查詢）
+
+## 開發環境設定
+
+1. 安裝套件：
    ```bash
    npm install
    ```
-3. 設定環境變數：
+2. 複製並填寫環境變數：
    ```bash
    cp .env.example .env.local
    ```
-   依照下一節的說明填入 Cloudflare R2 與管理密碼相關設定。
-4. 本機啟動：
+   依下表填入必要值，若要前端同步顯示大小限制，可同時設定公開變數。
+3. 本機啟動：
    ```bash
    npm run dev
    ```
+4. 其他腳本：
+   - `npm run lint`：以 ESLint 檢查程式碼。
+   - `npm run build`：產生生產環境建置成果。
+   - `npm run test`：執行 Vitest 測試。
 
-## Cloudflare R2 設定與部署到 Pages
+## 環境變數
 
-介面名稱與路徑可能因 Cloudflare 更新而異，若找不到本文提到的選項，可用頁面搜尋或在 R2 服務中尋找關鍵字：「bucket」「Public access」「CORS」「API token」「Access key」。
+| 變數 | 必填 | 說明 |
+| --- | --- | --- |
+| `R2_ACCOUNT_ID` | ✅ | Cloudflare 帳戶 ID，用於 R2 API。|
+| `R2_ACCESS_KEY_ID` | ✅ | R2 Access Key。|
+| `R2_SECRET_ACCESS_KEY` | ✅ | R2 Secret Key。|
+| `R2_BUCKET_NAME` | ✅ | 儲存媒體的 bucket 名稱。|
+| `R2_PUBLIC_BASE` | ✅ | 公開讀取的基底 URL，例如 `https://<bucket>.<account>.r2.cloudflarestorage.com`。|
+| `ADMIN_ACCESS_TOKEN` | ✅ | 管理密碼（最長 15 字），所有寫入 API 需於 `x-admin-token` header 帶入。|
+| `ADMIN_RATE_LIMIT_MAX_FAILURES` | ⬜️ | 自訂密碼錯誤可嘗試的次數（預設 5 次 / 5 分鐘）。|
+| `ADMIN_RATE_LIMIT_KV` | ⬜️ | Cloudflare KV Namespace 綁定名稱，用於跨節點共享速率限制計數。未提供時使用記憶體快取。|
+| `CLOUDFLARE_API_TOKEN` | ⬜️ | 具備 R2 讀取權限的 API Token；若設定，`/api/usage` 會直接查詢官方用量 API。|
+| `MAX_IMAGE_SIZE_MB` / `NEXT_PUBLIC_MAX_IMAGE_SIZE_MB` | ⬜️ | 圖片單檔大小上限（預設 10MB）。公開版本可顯示在前端提示。|
+| `MAX_VIDEO_SIZE_MB` / `MAX_SINGLE_SIZE_MB` / `NEXT_PUBLIC_MAX_VIDEO_SIZE_MB` / `NEXT_PUBLIC_MAX_SINGLE_SIZE_MB` | ⬜️ | 影片單檔大小上限（預設 150MB），多個變數皆可覆寫。|
 
-1. **建立 Bucket 與權限（可公開或私有）**：
-   - 在 R2 新增 bucket 並記下名稱；如需公開讀取，找到 Public access 或權限設定啟用公開，並將 `R2_PUBLIC_BASE` 設為公開 URL（格式類似 `https://<bucket>.<account>.r2.cloudflarestorage.com`）。
-   - 若要私有存取，跳過公開讀取，改用簽名網址或在 API 層驗證，並保留 `R2_PUBLIC_BASE` 供應用組出讀取路徑。
-2. **建立 API Token / Access Keys**：
-   - 在 R2 或帳戶的「API Tokens / Access Keys」頁面新增一組金鑰，取得 `R2_ACCESS_KEY_ID` 與 `R2_SECRET_ACCESS_KEY`；`R2_ACCOUNT_ID` 通常會在同一頁或帳戶首頁顯示。
-   - 若介面改版，先搜尋「Manage R2 API tokens」「Access keys」等關鍵字，多半位於 Security、API 或 R2 設定分頁。
-3. **設定環境變數**：
-   - 將以下變數填入 `.env.local`（開發）或 Pages 環境設定：
-     - 必填
-       - `R2_ACCOUNT_ID`
-       - `R2_ACCESS_KEY_ID`
-       - `R2_SECRET_ACCESS_KEY`
-       - `R2_BUCKET_NAME`
-       - `R2_PUBLIC_BASE`
-       - `ADMIN_ACCESS_TOKEN`（長度最多 15 個字，寫入 API 皆須帶上 `x-admin-token` 標頭；不要儲存在公開書籤或共用裝置，以降低洩漏風險）
-      - 選填
-        - `ADMIN_RATE_LIMIT_MAX_FAILURES`（管理密碼允許的失敗次數；未設定則使用 5 次 / 5 分鐘的預設限制）
-        - `MAX_IMAGE_SIZE_MB`（圖片上傳大小上限，預設 10MB；若要前端同步提示，請同時設定 `NEXT_PUBLIC_MAX_IMAGE_SIZE_MB`）
-        - `MAX_SINGLE_SIZE_MB`（影片上傳大小上限，預設 150MB；若要前端同步提示，請同時設定 `NEXT_PUBLIC_MAX_SINGLE_SIZE_MB`）
-   - 若透過 Pages Build，確保在「Environment Variables」與「Project settings → Build system → R2 bindings」一致。
-4. **CORS 與檔案型態**：
-   - 如果要在瀏覽器直接存取媒體，請在 R2 bucket CORS 規則加入允許 `GET, HEAD, OPTIONS`，並允許 `Content-Type` 標頭。
-   - 上傳 API 會限制為圖片與影片格式，並在瀏覽器端自動進行壓縮以節省流量。
-5. **部署與驗證**：
-   - Pages 部署完成後，可透過 `/api/upload` 上傳到指定路徑，並用 `/api/media` 取得媒體列表；若遇到按鈕位置或權限名稱改動，可比對上述關鍵字重新定位設定。
+## 主要功能與限制
 
-## 重要說明
+- **媒體清單**：依 prefix 直接列出 R2 內容，並以麵包屑呈現路徑。支援每頁 12 筆分頁、圖片 / 影片篩選與快速搜尋（大量檔案時啟用）。
+- **資料夾管理**：
+  - 建立、重新命名、移動與刪除皆需管理密碼。
+  - 資料夾最深 2 層，名稱最長 30 字；移動時也會驗證層級限制。
+- **檔案操作**：
+  - 重新命名、移動（含拖放）與刪除均需管理密碼並遵守兩層路徑規則。
+  - 上傳支援多檔案、總大小上限 400MB、單次最多 20 檔；依檔案 MIME 判定圖片 / 影片上限（預設 10MB / 150MB）。
+  - 上傳時自動在檔名加上時間戳記，並將 `Content-Type` 一併寫入 R2。
+- **安全與速率限制**：
+  - 管理模式狀態僅存在當前分頁的 sessionStorage，15 分鐘未操作會自動登出且離開分頁時會清空。
+  - 密碼錯誤會以 IP 為 key 進行限流，達上限後 API 會回傳需等待的分鐘數。
+- **bucket 用量**：若提供 `CLOUDFLARE_API_TOKEN`，`/api/usage` 會直接呼叫 Cloudflare 用量 API；否則改用分頁列舉計算總容量。
 
-- 專案未內建資料庫，媒體資料直接列舉 R2 bucket。
-- 已加入管理密碼檢查，若要更嚴格的身分驗證，可改用 OAuth/NextAuth 或簽發一次性下載 URL。
-- 預設僅提供瀏覽功能，若要啟用建立、上傳、移動與刪除，請在介面輸入 `ADMIN_ACCESS_TOKEN` 對應的管理密碼即可。
-- 資料夾結構限制為兩層，資料夾名稱最長 30 字，相關驗證已內建於前端操作。
-- 管理密碼欄位限制為 15 個字，輸入更長會被拒絕，請在設定環境變數時一併遵守此長度。
-- 管理密碼錯誤會觸發每 IP 限流；可綁定 Cloudflare KV（`ADMIN_RATE_LIMIT_KV`）以跨節點共享計數，未綁定則使用記憶體暫存。
+### 如何取得 `CLOUDFLARE_API_TOKEN`
+
+1. 進入 Cloudflare 控制台的 **My Profile → API Tokens**，點選 **Create Token**。
+2. 選用 **Get started → Create Custom Token**，在權限中加入：
+   - `Account` → `Workers R2 Storage` → `Read`（至少需要讀取，以供 `/api/usage` 查詢 bucket 用量）。
+3. 將 Token 的作用範圍（Account Resources）限制在目標帳戶後建立並複製，填入部署環境的 `CLOUDFLARE_API_TOKEN`。
+4. 若日後需要重新產生，請在同頁面 revoke 既有 Token 後再建立新的。
+
+## API 速查
+
+| 方法 | 路徑 | 用途 | 認證 |
+| --- | --- | --- | --- |
+| `GET /api/media?prefix=` | 取得指定 prefix 的資料夾與媒體清單。 | 不需密碼。 |
+| `POST /api/media` | 建立資料夾（`action: "create-folder"`、`prefix`、`name`）。 | `x-admin-token`。 |
+| `PATCH /api/media` | 重新命名或移動（`action: "rename"` 或 `"move"`，並附上 `key` 與目標參數）。 | `x-admin-token`。 |
+| `DELETE /api/media` | 刪除檔案或資料夾（`action: "delete"`、`key`）。 | `x-admin-token`。 |
+| `POST /api/upload` | 以上傳表單 (`files[]`, `path`) 將圖片 / 影片寫入 R2，套用大小與數量限制。 | `x-admin-token`。 |
+| `GET /api/usage` | 查詢 bucket 使用量；優先使用 Cloudflare API，其次以列舉計算。 | `x-admin-token`，並建議提供 `CLOUDFLARE_API_TOKEN`。 |
+
+## 部署建議（Cloudflare Pages）
+
+1. 在 Pages 專案設定中新增上述環境變數，並確保 `R2_*` 金鑰與 `ADMIN_ACCESS_TOKEN` 已填寫。
+2. 若要共享密碼速率限制，於 Pages 綁定 `ADMIN_RATE_LIMIT_KV` 到對應的 KV Namespace。
+3. `next.config.mjs` 已使用 Edge Runtime 配置 API，部署時不需額外調整；若使用自訂網域，請確認 `R2_PUBLIC_BASE` 與實際公開位址一致。
+4. 佈署完成後，可透過 UI 或以下端點驗證：
+   - `GET /api/media` 應回傳空清單或既有媒體。
+   - 上傳時確保管理密碼正確且符合大小限制；若錯誤，會在回應中看到剩餘嘗試次數或等待時間。
+
+## 疑難排解
+
+- **密碼總是被拒絕**：確認 `ADMIN_ACCESS_TOKEN` 是否與請求 header 的 `x-admin-token` 完全一致，並檢查是否因連續失敗觸發限流。
+- **上傳被檔案大小限制阻擋**：可調整 `MAX_IMAGE_SIZE_MB`、`MAX_VIDEO_SIZE_MB`（或對應公開變數）後重新部署。
+- **無法取得 bucket 用量**：確定已提供具備 R2 權限的 `CLOUDFLARE_API_TOKEN`，或等待以列舉方式計算（時間較長）。
+
