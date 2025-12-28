@@ -1,5 +1,7 @@
 'use client';
 
+import { type DragEvent } from 'react';
+
 import { MediaThumbnail } from './MediaThumbnail';
 import { MediaFile } from './types';
 
@@ -22,7 +24,9 @@ export function MediaSection({
   searchQuery,
   onSearchChange,
   isAdmin,
-  itemsPerPage
+  itemsPerPage,
+  onDragStart,
+  onDragEnd
 }: {
   allFilesCount: number;
   files: MediaFile[];
@@ -43,6 +47,8 @@ export function MediaSection({
   onSearchChange: (value: string) => void;
   isAdmin: boolean;
   itemsPerPage: number;
+  onDragStart?: (file: MediaFile, event: DragEvent<HTMLElement>) => void;
+  onDragEnd?: () => void;
 }) {
   if (!allFilesCount) return null;
 
@@ -129,6 +135,17 @@ export function MediaSection({
                 event.preventDefault();
                 onSelect(item, event.currentTarget);
               }
+            }}
+            draggable={isAdmin}
+            onDragStart={(event) => {
+              if (!isAdmin) return;
+              event.stopPropagation();
+              event.dataTransfer.effectAllowed = 'move';
+              event.dataTransfer.setData('text/plain', item.key);
+              onDragStart?.(item, event);
+            }}
+            onDragEnd={() => {
+              onDragEnd?.();
             }}
             role="button"
             tabIndex={0}

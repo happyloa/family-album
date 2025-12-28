@@ -1,5 +1,7 @@
 'use client';
 
+import { type DragEvent } from 'react';
+
 import { FolderItem } from './types';
 
 export function FolderGrid({
@@ -8,7 +10,9 @@ export function FolderGrid({
   onEnter,
   onRename,
   onMove,
-  onDelete
+  onDelete,
+  canDropMedia,
+  onDropMedia
 }: {
   folders: FolderItem[];
   isAdmin: boolean;
@@ -16,8 +20,17 @@ export function FolderGrid({
   onRename: (key: string) => void;
   onMove: (key: string) => void;
   onDelete: (key: string) => void;
+  canDropMedia?: boolean;
+  onDropMedia?: (folderKey: string) => void;
 }) {
   if (!folders.length) return null;
+
+  const handleDrop = (event: DragEvent<HTMLElement>, folderKey: string) => {
+    if (!canDropMedia) return;
+    event.preventDefault();
+    event.stopPropagation();
+    onDropMedia?.(folderKey);
+  };
 
   return (
     <div className="space-y-3">
@@ -35,12 +48,19 @@ export function FolderGrid({
             role="button"
             tabIndex={0}
             onClick={() => onEnter(folder.key)}
+            onDragOver={(event) => {
+              if (!canDropMedia) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+            }}
+            onDrop={(event) => handleDrop(event, folder.key)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
                 onEnter(folder.key);
               }
             }}
+            aria-label={canDropMedia ? `將媒體移動到 ${folder.name} 資料夾` : undefined}
           >
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-2xl">📂</div>

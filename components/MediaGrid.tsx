@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import { UploadForm } from './UploadForm';
 import { AdminAccessPanel } from './media/AdminAccessPanel';
@@ -47,6 +47,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [adminAction, setAdminAction] = useState<{ action: AdminActionType; target: AdminActionTarget } | null>(null);
   const previewTriggerRef = useRef<HTMLElement | null>(null);
+  const [draggingMedia, setDraggingMedia] = useState<MediaFile | null>(null);
 
   const pushMessage = (text: string, tone: MessageTone = 'info') => {
     setMessageTone(tone);
@@ -88,6 +89,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const filterVisible = hasImages && hasVideos;
   const searchEnabled = files.length > 36;
   const normalizedQuery = searchQuery.trim().toLowerCase();
+  const isDraggingMedia = Boolean(draggingMedia);
 
   useEffect(() => {
     if (!filterVisible && filter !== 'all') {
@@ -117,6 +119,13 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredFiles.slice(start, start + ITEMS_PER_PAGE);
   }, [currentPage, filteredFiles]);
+
+  const parentPrefix = useMemo(() => {
+    if (!currentPrefix) return null;
+    const parts = currentPrefix.split('/').filter(Boolean);
+    parts.pop();
+    return parts.join('/');
+  }, [currentPrefix]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -307,6 +316,45 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     return true;
   };
 
+  const handleMediaDragStart = (file: MediaFile, event: DragEvent<HTMLElement>) => {
+    if (!isAdmin) return;
+    event.dataTransfer.effectAllowed = 'move';
+    setDraggingMedia(file);
+  };
+
+  const handleMediaDragEnd = () => {
+    setDraggingMedia(null);
+  };
+
+  const moveDraggedMediaTo = async (targetPrefix: string) => {
+    if (!draggingMedia || !isAdmin) return;
+
+    const sanitizedTarget = sanitizePath(targetPrefix);
+    const targetDepth = getDepth(sanitizedTarget);
+
+    if (targetDepth > MAX_FOLDER_DEPTH) {
+      pushMessage('路徑深度超過限制，無法移動', 'error');
+      return;
+    }
+
+    if (sanitizedTarget === currentPrefix) {
+      pushMessage('媒體已在此資料夾', 'info');
+      return;
+    }
+
+    const allowed = await requestAdminToken('請輸入管理密碼以移動項目');
+    if (!allowed) return;
+
+    await handleAdminActionConfirm({
+      action: 'move',
+      key: draggingMedia.key,
+      isFolder: false,
+      targetPrefix: sanitizedTarget
+    });
+
+    setDraggingMedia(null);
+  };
+
   const handleCreateFolder = async () => {
     const allowed = await requestAdminToken('請輸入管理密碼以建立資料夾');
     if (!allowed) return;
@@ -494,6 +542,28 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         depth={depth}
       />
 
+      {isAdmin && isDraggingMedia && parentPrefix !== null && (
+        <div
+          className="flex items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-emerald-400/70 bg-emerald-500/10 px-4 py-3 text-emerald-50"
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            void moveDraggedMediaTo(parentPrefix);
+          }}
+          role="button"
+          aria-label="將媒體放到上一層"
+        >
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <span className="text-lg">⬆️</span>
+            <span>放到上一層</span>
+          </div>
+          <p className="text-xs text-emerald-100/80">將拖曳中的媒體移動到 {parentPrefix || '根目錄'}</p>
+        </div>
+      )}
+
       {loading ? (
         <MediaSkeleton />
       ) : (
@@ -507,6 +577,8 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             onRename={(key) => openAdminActionModal('rename', key, true)}
             onMove={(key) => openAdminActionModal('move', key, true)}
             onDelete={(key) => openAdminActionModal('delete', key, true)}
+            canDropMedia={isAdmin && isDraggingMedia}
+            onDropMedia={(targetKey) => void moveDraggedMediaTo(targetKey)}
           />
 
           <MediaSection
@@ -532,6 +604,8 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             onSearchChange={setSearchQuery}
             isAdmin={isAdmin}
             itemsPerPage={ITEMS_PER_PAGE}
+            onDragStart={handleMediaDragStart}
+            onDragEnd={handleMediaDragEnd}
           />
         </>
       )}
