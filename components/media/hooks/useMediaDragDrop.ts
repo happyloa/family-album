@@ -35,7 +35,8 @@ export function useMediaDragDrop({
   const handleMediaDragStart = (file: MediaFile, event: DragEvent<HTMLElement>) => {
     if (!isAdmin) return;
     event.dataTransfer.effectAllowed = 'move';
-    setDraggingMedia(file);
+    // 延遲更新狀態，避免因 React 重新渲染導致 DOM 變更而中斷原生的拖曳行為
+    setTimeout(() => setDraggingMedia(file), 0);
   };
 
   // 結束拖曳
