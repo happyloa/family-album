@@ -6,7 +6,12 @@ import { UploadForm } from './UploadForm';
 import { AdminAccessPanel } from './media/AdminAccessPanel';
 import { AdminActionModal } from './media/AdminActionModal';
 import { BreadcrumbNav } from './media/BreadcrumbNav';
-import { MAX_ADMIN_TOKEN_LENGTH, MAX_FOLDER_DEPTH, MAX_FOLDER_NAME_LENGTH } from './media/constants';
+import {
+  ITEMS_PER_PAGE,
+  MAX_ADMIN_TOKEN_LENGTH,
+  MAX_FOLDER_DEPTH,
+  MAX_FOLDER_NAME_LENGTH
+} from './media/constants';
 import { EmptyState } from './media/EmptyState';
 import { FolderCreator } from './media/FolderCreator';
 import { FolderGrid } from './media/FolderGrid';
