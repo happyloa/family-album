@@ -52,6 +52,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     setCurrentPage,
     totalPages,
     paginatedFiles,
+    filteredFiles,
     filterVisible,
     searchEnabled
   } = useMediaData({ pushMessage, refreshToken });
@@ -227,7 +228,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
           <MediaSection
             allFilesCount={files.length}
-            files={paginatedFiles}
+            files={filteredFiles}
             paginatedFiles={paginatedFiles}
             currentPage={currentPage}
             totalPages={totalPages}
