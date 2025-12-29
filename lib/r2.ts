@@ -47,6 +47,7 @@ const MAX_FILE_NAME_LENGTH = 255;
 
 const processEnv = typeof process !== 'undefined' ? process.env : undefined;
 
+// 讀取並驗證必要的環境變數
 function loadEnv(): Record<EnvKeys, string> {
   const entries: Partial<Record<EnvKeys, string>> = {
     R2_ACCOUNT_ID: processEnv?.R2_ACCOUNT_ID,
@@ -69,6 +70,7 @@ const env = loadEnv();
 
 const CLOUDFLARE_API_TOKEN = processEnv?.CLOUDFLARE_API_TOKEN;
 
+// 初始化 XML 解析器 (用於解析 R2 回傳的 XML)
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '',
@@ -77,6 +79,7 @@ const xmlParser = new XMLParser({
 
 let cachedClient: AwsClient | null = null;
 
+// 初始化並快取 AWS Client (aws4fetch)
 function getClient() {
   if (cachedClient) return cachedClient;
 
@@ -90,14 +93,17 @@ function getClient() {
   return cachedClient;
 }
 
+// 標準化路徑：移除前後斜線
 function normalizePath(path: string) {
   return path.replace(/^\/+|\/+$/g, '').trim();
 }
 
+// 清理路徑片段：移除不合法字元
 function sanitizeSegment(name: string) {
   return normalizePath(name).replace(/[<>:"/\\|?*]+/g, '');
 }
 
+// 清理完整路徑
 function sanitizePath(path: string) {
   return path
     .split('/')
@@ -106,19 +112,23 @@ function sanitizePath(path: string) {
     .join('/');
 }
 
+// 計算路徑深度
 function getDepth(path: string) {
   return path ? path.split('/').filter(Boolean).length : 0;
 }
 
+// 建構物件 Key (單一檔案)
 function buildObjectKey(path: string) {
   return normalizePath(path);
 }
 
+// 建構資料夾 Key (以 / 結尾)
 function buildFolderKey(path: string) {
   const normalized = normalizePath(path);
   return normalized ? `${normalized}/` : '';
 }
 
+// 將 Key 編碼為公開 URL
 function encodeKeyForUrl(key: string, base: string) {
   const url = new URL(base);
   const decodedBasePath = decodeURI(url.pathname || '/').replace(/\/+$/, '');
@@ -133,6 +143,7 @@ function encodeKeyForUrl(key: string, base: string) {
   return url.toString();
 }
 
+// 編碼用於 Copy Source 的 Header
 function encodeCopySource(bucket: string, key: string) {
   return `/${bucket}/${key
     .split('/')
@@ -140,6 +151,7 @@ function encodeCopySource(bucket: string, key: string) {
     .join('/')}`;
 }
 
+// 跳脫 XML 特殊字元
 function escapeXml(text: string) {
   return text
     .replace(/&/g, '&amp;')
@@ -149,11 +161,13 @@ function escapeXml(text: string) {
     .replace(/'/g, '&apos;');
 }
 
+// 確保值為陣列
 function ensureArray<T>(value: T | T[] | undefined): T[] {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
 }
 
+// 讀取 XML 文字節點
 function readTextNode(value: unknown): string {
   if (value === undefined || value === null) return '';
   if (typeof value === 'string' || typeof value === 'number') return String(value);
@@ -165,11 +179,13 @@ function readTextNode(value: unknown): string {
   return '';
 }
 
+// 執行簽名請求
 async function signedFetch(input: string, init?: RequestInit) {
   const client = getClient();
   return client.fetch(input, init);
 }
 
+// 透過 Cloudflare API 查詢 Bucket 使用量
 async function fetchCloudflareBucketUsage() {
   if (!CLOUDFLARE_API_TOKEN) return null;
 
@@ -199,11 +215,13 @@ async function fetchCloudflareBucketUsage() {
   return usageBytes;
 }
 
+// 建構 R2 API 端點 URL
 function buildEndpointPath(path: string) {
   const endpoint = `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   return new URL(path, endpoint).toString();
 }
 
+// 建構 List Objects URL
 function buildListUrl(prefix: string, options: { continuationToken?: string; delimiter?: string } = {}) {
   const url = new URL(buildEndpointPath(`/${env.R2_BUCKET_NAME}`));
   url.searchParams.set('list-type', '2');
@@ -217,6 +235,7 @@ function buildListUrl(prefix: string, options: { continuationToken?: string; del
   return url;
 }
 
+// 根據副檔名推斷媒體類型
 function inferType(key: string): MediaFile['type'] {
   const lowered = key.toLowerCase();
   if (lowered.endsWith('.mp4') || lowered.endsWith('.mov') || lowered.endsWith('.webm')) {
@@ -232,6 +251,7 @@ type ParsedListResult = {
   nextContinuationToken?: string;
 };
 
+// 解析 List Objects XML 回傳
 function parseListResult(
   xml: string,
   searchPrefix: string,
@@ -274,6 +294,7 @@ function parseListResult(
   return { folders, contents, isTruncated, nextContinuationToken };
 }
 
+// 收集指定 Prefix 下的所有 Key (用於刪除或移動資料夾)
 async function collectKeys(prefix: string, options: { includePrefixObject?: boolean } = {}) {
   const keys: string[] = [];
   let continuationToken: string | undefined;
@@ -294,6 +315,7 @@ async function collectKeys(prefix: string, options: { includePrefixObject?: bool
   return keys;
 }
 
+// 批次刪除物件
 async function deleteObjects(keys: string[]) {
   while (keys.length > 0) {
     const batch = keys.splice(0, 1000);
@@ -316,6 +338,7 @@ async function deleteObjects(keys: string[]) {
   }
 }
 
+// 在 Bucket 內複製物件
 async function copyObjectWithinBucket(sourceKey: string, targetKey: string) {
   const copyUrl = buildEndpointPath(`/${env.R2_BUCKET_NAME}/${targetKey}`);
   const copyResponse = await signedFetch(copyUrl, {
@@ -331,6 +354,7 @@ async function copyObjectWithinBucket(sourceKey: string, targetKey: string) {
   }
 }
 
+// 取得媒體列表 (包含資料夾與檔案)
 export async function listMedia(prefix = ''): Promise<MediaListing> {
   const normalizedPrefix = sanitizePath(prefix);
   const searchPrefix = buildFolderKey(normalizedPrefix);
@@ -357,6 +381,7 @@ export async function listMedia(prefix = ''): Promise<MediaListing> {
   } satisfies MediaListing;
 }
 
+// 取得 Bucket 總使用量
 export async function getBucketUsage(): Promise<BucketUsage> {
   try {
     const cloudflareUsage = await fetchCloudflareBucketUsage();
@@ -387,6 +412,7 @@ export async function getBucketUsage(): Promise<BucketUsage> {
   return { bytes: totalBytes } satisfies BucketUsage;
 }
 
+// 上傳檔案至 R2
 export async function uploadToR2(file: File, targetPrefix = '') {
   const normalizedPrefix = sanitizePath(targetPrefix);
   if (getDepth(normalizedPrefix) > MAX_FOLDER_DEPTH) {
@@ -432,6 +458,7 @@ export async function uploadToR2(file: File, targetPrefix = '') {
   } satisfies MediaFile;
 }
 
+// 建立空資料夾 (以 0-byte object 結尾 / 實作)
 export async function createFolder(prefix: string, name: string) {
   const normalizedPrefix = sanitizePath(prefix);
   const normalizedName = sanitizeSegment(name);
@@ -464,6 +491,7 @@ function removeTrailingExtension(name: string, extension: string) {
   return name.toLowerCase().endsWith(extension.toLowerCase()) ? name.slice(0, -extension.length) : name;
 }
 
+// 產生不重複檔名 (若重複則自動加上編號)
 function buildUniqueFileName(baseName: string, extension: string, existingNames: Set<string>) {
   let counter = 2;
   let candidate = extension ? `${baseName}${extension}` : baseName;
@@ -483,6 +511,7 @@ function buildUniqueFileNameForConflict(fileName: string, existingNames: Set<str
   return buildUniqueFileName(baseName, extension, existingNames);
 }
 
+// 列出既有檔名集合 (用於檢查衝突)
 async function listExistingFileNames(prefix: string, options: { excludeKey?: string } = {}) {
   const listing = await listMedia(prefix);
   const existingNames = new Set<string>();
@@ -496,6 +525,7 @@ async function listExistingFileNames(prefix: string, options: { excludeKey?: str
   return existingNames;
 }
 
+// 依資料夾列出既有檔名 (用於大量移動時檢查衝突)
 async function listExistingFileNamesByFolder(prefix: string) {
   const existingNamesByFolder = new Map<string, Set<string>>();
   const keys = await collectKeys(prefix, { includePrefixObject: true });
@@ -514,6 +544,7 @@ async function listExistingFileNamesByFolder(prefix: string) {
   return existingNamesByFolder;
 }
 
+// 重新命名檔案
 export async function renameFile(key: string, newName: string) {
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
@@ -561,6 +592,7 @@ export async function renameFile(key: string, newName: string) {
   } satisfies MediaFile;
 }
 
+// 重新命名資料夾 (遞迴移動所有子項目)
 export async function renameFolder(key: string, newName: string) {
   const normalizedKey = normalizePath(key);
   const parts = normalizedKey.split('/');
@@ -582,6 +614,7 @@ export async function renameFolder(key: string, newName: string) {
   return { key: newFolderPath, name: newFolderPath.split('/').pop() || newFolderPath } satisfies FolderItem;
 }
 
+// 刪除單一檔案
 export async function deleteFile(key: string) {
   const normalizedKey = normalizePath(key);
   const deleteUrl = buildEndpointPath(`/${env.R2_BUCKET_NAME}/${normalizedKey}`);
@@ -592,6 +625,7 @@ export async function deleteFile(key: string) {
   }
 }
 
+// 刪除資料夾 (可選擇移動內容到上一層或全部刪除)
 export async function deleteFolder(prefix: string, options: { moveContentsToParent?: boolean } = {}) {
   const normalizedPrefix = sanitizePath(prefix);
   const parentPrefix = normalizedPrefix.split('/').slice(0, -1).join('/');
@@ -620,6 +654,7 @@ export async function deleteFolder(prefix: string, options: { moveContentsToPare
   await deleteObjects(keys);
 }
 
+// 移動檔案
 export async function moveFile(key: string, targetPrefix: string) {
   const normalizedKey = normalizePath(key);
   const filename = normalizedKey.split('/').pop();
@@ -645,6 +680,7 @@ export async function moveFile(key: string, targetPrefix: string) {
   return { key: newKey, url: encodeKeyForUrl(newKey, env.R2_PUBLIC_BASE), type: inferType(newKey) } satisfies MediaFile;
 }
 
+// 移動資料夾
 export async function moveFolder(key: string, targetPrefix: string) {
   const normalizedKey = normalizePath(key);
   const folderName = normalizedKey.split('/').pop();

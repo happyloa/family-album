@@ -11,13 +11,13 @@ import {
   MAX_FILE_COUNT,
   MAX_IMAGE_SIZE_BYTES,
   MAX_TOTAL_SIZE_MB,
-  MAX_VIDEO_SIZE_BYTES,
   getSizeLimitByMime
 } from './constants';
 
 // 使用 Edge Runtime 以符合 Cloudflare Pages 的執行環境。
 export const runtime = 'edge';
 
+// 驗證管理員權限與處理速率限制
 async function ensureAdmin(request: Request, rateLimiter: AdminRateLimiter) {
   const adminToken = process.env.ADMIN_ACCESS_TOKEN;
   if (!adminToken) {
@@ -43,6 +43,10 @@ async function ensureAdmin(request: Request, rateLimiter: AdminRateLimiter) {
   return null;
 }
 
+/**
+ * POST: 處理檔案上傳
+ * 支援多檔案上傳，會先驗證大小與格式，再寫入 R2
+ */
 export async function POST(request: Request) {
   try {
     const rateLimiter = createAdminRateLimiter(request);
@@ -64,6 +68,7 @@ export async function POST(request: Request) {
     const totalSizeBytes = files.reduce((sum, file) => sum + file.size, 0);
     const maxTotalSizeBytes = MAX_TOTAL_SIZE_MB * 1024 * 1024;
 
+    // 檢查總檔案數量上限
     if (totalFileCount > MAX_FILE_COUNT) {
       return NextResponse.json(
         {
@@ -74,6 +79,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // 檢查總容量上限
     if (totalSizeBytes > maxTotalSizeBytes) {
       return NextResponse.json(
         {
@@ -84,6 +90,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // 驗證每個檔案的大小與格式
     const invalidFiles = files
       .map((file) => {
         const sizeLimit = getSizeLimitByMime(file.type);
@@ -105,6 +112,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '無效的檔案', details: invalidFiles }, { status: 400 });
     }
 
+    // 並行上傳至 R2
     const uploads = await Promise.all(files.map((file) => uploadToR2(file, targetPath)));
     return NextResponse.json({ media: uploads });
   } catch (error) {

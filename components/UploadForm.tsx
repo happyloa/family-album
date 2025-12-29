@@ -7,6 +7,14 @@ import {
   getSizeLimitByMime
 } from '@/lib/upload/constants';
 
+/**
+ * UploadForm: 檔案上傳表單
+ * 負責處理：
+ * 1. 檔案選取與驗證 (MIME Type, Size)
+ * 2. 圖片前端壓縮 (使用 Canvas)
+ * 3. 顯示 Bucket 使用量
+ * 4. 上傳進度條與狀態提示
+ */
 export function UploadForm({
   onUploaded,
   currentPath = '',
@@ -65,6 +73,7 @@ export function UploadForm({
   const imageSizeLabel = formatSizeLabel(MAX_IMAGE_SIZE_MB);
   const videoSizeLabel = formatSizeLabel(MAX_VIDEO_SIZE_MB);
 
+  // 重新整理 Bucket 使用量 (呼叫 API)
   const refreshBucketUsage = useCallback(async () => {
     setUsageLoading(true);
     setUsageError('');

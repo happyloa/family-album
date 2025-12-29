@@ -17,7 +17,7 @@ type RateLimitStore = {
   reset: (key: string) => Promise<void>;
 };
 
-const DEFAULT_ADMIN_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
+const DEFAULT_ADMIN_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 5分鐘
 const DEFAULT_ADMIN_RATE_LIMIT_MAX_FAILURES = 5;
 
 const processEnv = typeof process !== 'undefined' ? process.env : undefined;
@@ -39,13 +39,16 @@ export const ADMIN_RATE_LIMIT_MAX_FAILURES = readPositiveInt(
 const ADMIN_RATE_LIMIT_KEY_PREFIX = 'admin-failure';
 const ADMIN_RATE_LIMIT_WINDOW_SECONDS = Math.ceil(ADMIN_RATE_LIMIT_WINDOW_MS / 1000);
 
+// 記憶體內存 (fallback 用，適用於非 Serverless 或單一實例環境)
 const memoryStore = new Map<string, MemoryEntry>();
 
+// 取得 Cloudflare KV Binding (如果有的話)
 function getKvBinding(): KvNamespace | null {
   const globalBinding = (globalThis as { ADMIN_RATE_LIMIT_KV?: KvNamespace }).ADMIN_RATE_LIMIT_KV;
   return globalBinding ?? null;
 }
 
+// 取得儲存後端 (優先使用 KV，其次 Memory)
 function getStore(): RateLimitStore {
   const kv = getKvBinding();
 
@@ -96,6 +99,7 @@ function getStore(): RateLimitStore {
   };
 }
 
+// 取得客戶端 IP
 function getClientIp(request: Request): string {
   const cfConnectingIp = request.headers.get('cf-connecting-ip');
   if (cfConnectingIp) return cfConnectingIp;
@@ -116,12 +120,17 @@ export type AdminRateLimiter = {
   reset: () => Promise<void>;
 };
 
+/**
+ * 建立管理員登入速率限制器
+ * 使用 IP 作為 Key，限制短時間內的嘗試次數，防止暴力破解
+ */
 export function createAdminRateLimiter(request: Request): AdminRateLimiter {
   const store = getStore();
   const ip = getClientIp(request);
   const key = buildKey(ip);
 
   return {
+    // 檢查是否超過限制
     async check() {
       const count = await store.getCount(key);
       if (count >= ADMIN_RATE_LIMIT_MAX_FAILURES) {
@@ -133,9 +142,11 @@ export function createAdminRateLimiter(request: Request): AdminRateLimiter {
       }
       return null;
     },
+    // 記錄失敗嘗試
     async recordFailure() {
       return store.increment(key, ADMIN_RATE_LIMIT_WINDOW_SECONDS);
     },
+    // 重設計數 (登入成功時)
     async reset() {
       await store.reset(key);
     }

@@ -4,11 +4,16 @@ import { Suspense } from 'react';
 
 import { MediaGrid } from '@/components/MediaGrid';
 
+/**
+ * Home Page: 專案首頁
+ * 包含標題區塊與主要的媒體網格 (MediaGrid)
+ */
 export default function Home() {
-  const refreshToken = 0;
+  const refreshToken = 0; // 用於觸發 MediaGrid 重新整理的 key
 
   return (
     <section className="space-y-6" aria-label="家庭相簿首頁">
+      {/* 標題與說明區塊 */}
       <div className="flex flex-col gap-3 rounded-3xl border border-slate-800/80 bg-slate-900/60 px-6 py-5 shadow-lg ring-1 ring-white/10 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">家庭相簿</p>
@@ -17,6 +22,7 @@ export default function Home() {
         <p className="text-sm text-slate-300">請在需要寫入時輸入管理密碼，所有媒體皆依資料夾路徑顯示。</p>
       </div>
 
+      {/* 媒體列表區塊：使用 Suspense 處理載入狀態 */}
       <Suspense fallback={<div className="text-sm text-slate-300">Loading media...</div>}>
         <MediaGrid refreshToken={refreshToken} />
       </Suspense>
