@@ -11,6 +11,7 @@ import {
 // Edge runtime to align with other R2 operations
 export const runtime = 'edge';
 
+// 驗證管理員權限與處理速率限制
 async function ensureAdmin(request: Request, rateLimiter: AdminRateLimiter) {
   const adminToken = process.env.ADMIN_ACCESS_TOKEN;
   if (!adminToken) {
@@ -36,6 +37,10 @@ async function ensureAdmin(request: Request, rateLimiter: AdminRateLimiter) {
   return null;
 }
 
+/**
+ * GET: 查詢 Bucket 使用量
+ * 若有設定 CLOUDFLARE_API_TOKEN，會直接查詢 API；否則透過列舉檔案計算總和。
+ */
 export async function GET(request: Request) {
   try {
     const rateLimiter = createAdminRateLimiter(request);

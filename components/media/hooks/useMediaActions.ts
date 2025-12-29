@@ -12,6 +12,10 @@ type UseMediaActionsProps = {
   currentPrefix: string;
 };
 
+/**
+ * useMediaActions Hook: 媒體與資料夾操作邏輯
+ * 包含：建立資料夾、重新命名、移動、刪除等需要管理員權限的操作
+ */
 export function useMediaActions({
   authorizedFetch,
   requestAdminToken,
@@ -22,6 +26,7 @@ export function useMediaActions({
   const [newFolderName, setNewFolderName] = useState('');
   const [adminAction, setAdminAction] = useState<{ action: AdminActionType; target: AdminActionTarget } | null>(null);
 
+  // 建立新資料夾
   const handleCreateFolder = async () => {
     const allowed = await requestAdminToken('請輸入管理密碼以建立資料夾');
     if (!allowed) return;
@@ -64,6 +69,7 @@ export function useMediaActions({
     }
   };
 
+  // 開啟管理操作確認視窗 (Rename/Move/Delete)
   const openAdminActionModal = async (action: AdminActionType, key: string, isFolder: boolean) => {
     const promptMap: Record<AdminActionType, string> = {
       rename: '請輸入管理密碼以重新命名',
@@ -76,6 +82,7 @@ export function useMediaActions({
     setAdminAction({ action, target: { key, isFolder } });
   };
 
+  // 確認執行管理操作
   const handleAdminActionConfirm = async (payload: {
     action: AdminActionType;
     key: string;
@@ -83,6 +90,7 @@ export function useMediaActions({
     newName?: string;
     targetPrefix?: string;
   }) => {
+    // 重新命名
     if (payload.action === 'rename') {
       if (!payload.newName) return;
       try {
@@ -111,6 +119,7 @@ export function useMediaActions({
       return;
     }
 
+    // 移動
     if (payload.action === 'move') {
       if (payload.targetPrefix === undefined) return;
       try {
@@ -139,6 +148,7 @@ export function useMediaActions({
       return;
     }
 
+    // 刪除
     try {
       const response = await authorizedFetch('/api/media', {
         method: 'DELETE',

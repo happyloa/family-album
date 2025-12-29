@@ -6,12 +6,17 @@ type UseAdminAuthProps = {
   pushMessage: (text: string, tone: 'info' | 'success' | 'error') => void;
 };
 
+/**
+ * useAdminAuth Hook: 管理員權限控制
+ * 包含：Token 驗證、Session 儲存、逾時自動登出、以及發送帶有 Auth Header 的請求
+ */
 export function useAdminAuth({ pushMessage }: UseAdminAuthProps) {
   const [adminToken, setAdminToken] = useState('');
   const [adminInput, setAdminInput] = useState('');
   const isAdmin = Boolean(adminToken);
   const adminTimeoutRef = useRef<number | null>(null);
 
+  // 清除管理員 Session (登出)
   const clearAdminSession = useCallback(
     (notice?: string) => {
       setAdminInput('');
@@ -32,6 +37,7 @@ export function useAdminAuth({ pushMessage }: UseAdminAuthProps) {
     [pushMessage]
   );
 
+  // 重設逾時倒數計時器
   const resetAdminTimeout = useCallback(() => {
     if (adminTimeoutRef.current) {
       window.clearTimeout(adminTimeoutRef.current);
@@ -43,6 +49,7 @@ export function useAdminAuth({ pushMessage }: UseAdminAuthProps) {
     }, ADMIN_SESSION_DURATION_MS);
   }, [clearAdminSession]);
 
+  // 驗證並套用 Token
   const validateAndApplyToken = useCallback(
     async (token: string, options?: { silent?: boolean }) => {
       const trimmed = token.trim();
@@ -111,6 +118,7 @@ export function useAdminAuth({ pushMessage }: UseAdminAuthProps) {
     [clearAdminSession, pushMessage, resetAdminTimeout]
   );
 
+  // 請求輸入管理員 Token (用於敏感操作前)
   const requestAdminToken = useCallback(
     async (promptMessage = '請輸入管理密碼以繼續'): Promise<boolean> => {
       if (!adminToken) {
@@ -128,17 +136,19 @@ export function useAdminAuth({ pushMessage }: UseAdminAuthProps) {
     [adminToken, adminInput, validateAndApplyToken, resetAdminTimeout]
   );
 
+  // 初始化檢查 Session Storage
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) : '';
     if (saved) {
-      // Avoid calling setState synchronously within an effect
-      // Use requestAnimationFrame to defer the execution until the next frame
+      // 避免在 effect 中同步呼叫 setState 導致的問題
+      // 使用 requestAnimationFrame 將執行推遲到下一幀
       requestAnimationFrame(() => {
         void validateAndApplyToken(saved, { silent: true });
       });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 離開頁面時清除 Session (安全性考量)
   useEffect(() => {
     const handleBeforeUnload = () => {
       sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
@@ -148,6 +158,7 @@ export function useAdminAuth({ pushMessage }: UseAdminAuthProps) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
+  // 包裝過的 Fetch，自動帶入 Admin Token
   const authorizedFetch = useCallback(
     (input: RequestInfo | URL, init: RequestInit = {}) => {
       const headers = new Headers(init.headers || {});

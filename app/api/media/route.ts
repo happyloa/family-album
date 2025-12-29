@@ -17,12 +17,13 @@ import {
   createAdminRateLimiter
 } from '@/lib/admin-rate-limit';
 
-// This route must run on the Edge runtime to be compatible with Cloudflare Pages
-// builds. The R2 client in lib/r2.ts is implemented with fetch so it works here.
+// 設定 Edge Runtime 以相容 Cloudflare Pages 部署
 export const runtime = 'edge';
 
+// 計算路徑深度，用於限制巢狀層級
 const getDepth = (path: string) => (path ? path.split('/').filter(Boolean).length : 0);
 
+// 驗證建立資料夾請求
 export function validateCreateFolder(prefix: string, name: string | undefined) {
   if (!name) return '資料夾名稱不可為空';
 
@@ -37,6 +38,7 @@ export function validateCreateFolder(prefix: string, name: string | undefined) {
   return null;
 }
 
+// 驗證重新命名資料夾請求
 export function validateRenameFolder(isFolder: boolean | undefined, newName: string) {
   if (!isFolder) return null;
 
@@ -47,6 +49,7 @@ export function validateRenameFolder(isFolder: boolean | undefined, newName: str
   return null;
 }
 
+// 驗證移動項目請求 (包含深度檢查)
 export function validateMoveTarget(targetPrefix: string, isFolder: boolean | undefined) {
   const targetDepth = getDepth(targetPrefix);
 
@@ -61,6 +64,7 @@ export function validateMoveTarget(targetPrefix: string, isFolder: boolean | und
   return null;
 }
 
+// 驗證管理員權限與處理速率限制
 async function ensureAdmin(request: NextRequest, rateLimiter: AdminRateLimiter) {
   const adminToken = process.env.ADMIN_ACCESS_TOKEN;
   if (!adminToken) {
@@ -86,6 +90,9 @@ async function ensureAdmin(request: NextRequest, rateLimiter: AdminRateLimiter) 
   return null;
 }
 
+/**
+ * GET: 取得媒體列表
+ */
 export async function GET(request: NextRequest) {
   try {
     const prefix = request.nextUrl.searchParams.get('prefix') || '';
@@ -97,6 +104,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * POST: 處理資料夾建立與權限驗證
+ */
 export async function POST(request: NextRequest) {
   try {
     const rateLimiter = createAdminRateLimiter(request);
@@ -128,6 +138,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * PATCH: 處理重新命名與移動
+ */
 export async function PATCH(request: NextRequest) {
   try {
     const rateLimiter = createAdminRateLimiter(request);
@@ -187,6 +200,9 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+/**
+ * DELETE: 刪除檔案或資料夾
+ */
 export async function DELETE(request: NextRequest) {
   try {
     const rateLimiter = createAdminRateLimiter(request);

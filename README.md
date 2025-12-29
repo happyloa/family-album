@@ -11,6 +11,19 @@
 - **Session 安全性**：管理模式僅儲存在當前分頁的 sessionStorage，15 分鐘未操作會自動失效，換頁或重新整理都需再輸入密碼。
 - **Cloudflare Pages 友善**：所有 API 以 Edge Runtime 實作並透過 `aws4fetch` 呼叫 R2，可直接部署到 Pages；若提供 `CLOUDFLARE_API_TOKEN` 則可查詢 bucket 使用量。
 
+## 專案結構
+
+本專案採用 Next.js App Router 架構，並針對邏輯進行了模組化拆分：
+
+- `app/`：Next.js App Router 頁面與 API Routes。
+  - `api/`：後端邏輯，運行於 Edge Runtime。
+- `components/`：前端 React 元件。
+  - `media/`：媒體瀏覽相關元件與 Hooks。
+    - `hooks/`：包含 `useMediaData` (資料流), `useAdminAuth` (權限), `useMediaActions` (操作), `useMediaDragDrop` (拖曳) 等 Custom Hooks。
+- `lib/`：共用函式庫。
+  - `r2.ts`：Cloudflare R2 操作封裝 (aws4fetch)。
+  - `admin-rate-limit.ts`：管理員登入速率限制邏輯。
+
 ## 需求與相依
 
 - Node.js 20+ 與 npm
@@ -101,4 +114,3 @@
 - **密碼總是被拒絕**：確認 `ADMIN_ACCESS_TOKEN` 是否與請求 header 的 `x-admin-token` 完全一致，並檢查是否因連續失敗觸發限流。
 - **上傳被檔案大小限制阻擋**：可調整 `MAX_IMAGE_SIZE_MB`、`MAX_VIDEO_SIZE_MB`（或對應公開變數）後重新部署。
 - **無法取得 bucket 用量**：確定已提供具備 R2 權限的 `CLOUDFLARE_API_TOKEN`，或等待以列舉方式計算（時間較長）。
-

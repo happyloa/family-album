@@ -18,6 +18,10 @@ type UseMediaDragDropProps = {
   }) => Promise<void>;
 };
 
+/**
+ * useMediaDragDrop Hook: 處理媒體拖曳邏輯
+ * 允許管理員將檔案拖曳到資料夾或「回到上一層」區域以進行移動
+ */
 export function useMediaDragDrop({
   isAdmin,
   currentPrefix,
@@ -27,16 +31,19 @@ export function useMediaDragDrop({
 }: UseMediaDragDropProps) {
   const [draggingMedia, setDraggingMedia] = useState<MediaFile | null>(null);
 
+  // 開始拖曳
   const handleMediaDragStart = (file: MediaFile, event: DragEvent<HTMLElement>) => {
     if (!isAdmin) return;
     event.dataTransfer.effectAllowed = 'move';
     setDraggingMedia(file);
   };
 
+  // 結束拖曳
   const handleMediaDragEnd = () => {
     setDraggingMedia(null);
   };
 
+  // 處理放置 (Drop) 事件：移動檔案到目標路徑
   const moveDraggedMediaTo = async (targetPrefix: string) => {
     if (!draggingMedia || !isAdmin) return;
 
