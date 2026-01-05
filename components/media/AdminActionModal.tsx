@@ -197,9 +197,13 @@ export function AdminActionModal({
               <input
                 id="rename-input"
                 className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400"
+                inputMode="text"
+                autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
-                placeholder="輸入新的檔案或資料夾名稱"
+                placeholder="輸入新的檔案或資料夾名稱（支援表情符號）"
               />
               {finalName && (
                 <p className="text-xs text-slate-400">完成後名稱：{finalName}</p>
