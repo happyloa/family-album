@@ -1,7 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 export type AdminActionType = 'rename' | 'move' | 'delete';
 
@@ -26,7 +26,7 @@ type AdminActionModalProps = {
     isFolder: boolean;
     newName?: string;
     targetPrefix?: string;
-  }) => void;
+  }) => void | Promise<void>;
 };
 
 const ACTION_TITLE: Record<AdminActionType, string> = {
@@ -69,6 +69,12 @@ export function AdminActionModal({
   }, [action, target, baseName, currentPrefix]);
 
   const [inputValue, setInputValue] = useState(initialInputValue);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setInputValue(initialInputValue);
+    setIsSubmitting(false);
+  }, [initialInputValue]);
 
   const { errorMessage, helperMessage, sanitizedName, sanitizedPath } = useMemo(() => {
     if (!action || !target) {
@@ -147,24 +153,30 @@ export function AdminActionModal({
 
   if (!action || !target) return null;
 
-  const confirmDisabled = Boolean(errorMessage);
+  const confirmDisabled = Boolean(errorMessage) || isSubmitting;
   const finalName = sanitizedName ? `${sanitizedName}${extension}` : '';
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (confirmDisabled) return;
 
-    if (action === 'rename') {
-      onConfirm({ action, key: target.key, isFolder: target.isFolder, newName: finalName });
-      return;
-    }
+    setIsSubmitting(true);
 
-    if (action === 'move') {
-      onConfirm({ action, key: target.key, isFolder: target.isFolder, targetPrefix: sanitizedPath });
-      return;
-    }
+    try {
+      if (action === 'rename') {
+        await onConfirm({ action, key: target.key, isFolder: target.isFolder, newName: finalName });
+        return;
+      }
 
-    onConfirm({ action, key: target.key, isFolder: target.isFolder });
+      if (action === 'move') {
+        await onConfirm({ action, key: target.key, isFolder: target.isFolder, targetPrefix: sanitizedPath });
+        return;
+      }
+
+      await onConfirm({ action, key: target.key, isFolder: target.isFolder });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -193,9 +205,13 @@ export function AdminActionModal({
               <input
                 id="rename-input"
                 className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400"
+                inputMode="text"
+                autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
-                placeholder="輸入新的檔案或資料夾名稱"
+                placeholder="輸入新的檔案或資料夾名稱（支援表情符號）"
               />
               {finalName && (
                 <p className="text-xs text-slate-400">完成後名稱：{finalName}</p>
@@ -247,18 +263,27 @@ export function AdminActionModal({
 
           <div className="flex flex-col gap-3 border-t border-slate-800 pt-4 sm:flex-row sm:justify-end">
             <button
-              className="rounded-full border border-slate-700 px-5 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 cursor-pointer"
+              className="rounded-full border border-slate-700 px-5 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
               type="button"
               onClick={onCancel}
+              disabled={isSubmitting}
             >
               取消
             </button>
             <button
-              className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-5 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-5 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
               type="submit"
               disabled={confirmDisabled}
             >
-              確認
+              <span className="flex items-center justify-center gap-2">
+                {isSubmitting && (
+                  <span
+                    className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-100/70 border-t-transparent"
+                    aria-hidden="true"
+                  />
+                )}
+                <span>確認</span>
+              </span>
             </button>
           </div>
         </form>

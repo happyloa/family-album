@@ -85,6 +85,9 @@ function VideoPreview({ src, alt, onReady }: { src: string; alt: string; onReady
   );
 }
 
+const BLUR_PLACEHOLDER =
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMxNTM3NzEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMzNjg2NzYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTIiIGhlaWdodD0iOCIgcng9IjIiIGZpbGw9InVybCgjYSkiLz48L3N2Zz4=';
+
 export function MediaThumbnail({ media }: { media: MediaFile }) {
   const [loadedUrl, setLoadedUrl] = useState('');
   const isLoaded = loadedUrl === media.url;
@@ -92,28 +95,30 @@ export function MediaThumbnail({ media }: { media: MediaFile }) {
 
   return (
     <div className="relative aspect-[4/3] overflow-hidden bg-slate-900">
-      {!isLoaded && (
-        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span
-              className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-300/70 border-t-transparent"
-              aria-hidden="true"
-            />
-          </div>
-        </div>
-      )}
+      <div
+        className={`absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 transition-opacity duration-500 ${
+          isLoaded ? 'opacity-0' : 'opacity-100'
+        }`}
+      />
       {media.type === 'image' ? (
         <Image
           src={media.url}
           alt={media.key}
           fill
-          className={`object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-          sizes="(min-width: 1280px) 25vw, 50vw"
+          sizes="(min-width: 1024px) 25vw, 50vw"
+          className={`object-cover transition-[opacity,filter,transform] duration-500 ${
+            isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-80 blur-xl scale-105'
+          }`}
+          placeholder="blur"
+          blurDataURL={BLUR_PLACEHOLDER}
           onLoadingComplete={handleReady}
           onError={handleReady}
         />
       ) : (
-        <VideoPreview src={media.url} alt={media.key} onReady={handleReady} />
+        <>
+          {!isLoaded && <div className="absolute inset-0 backdrop-blur-sm transition-opacity duration-500" />}
+          <VideoPreview src={media.url} alt={media.key} onReady={handleReady} />
+        </>
       )}
       <MediaBadge type={media.type} />
     </div>
