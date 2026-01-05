@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import {
   MAX_IMAGE_SIZE_MB,
   MAX_VIDEO_SIZE_MB,
@@ -12,7 +12,7 @@ import {
  * 負責處理：
  * 1. 檔案選取與驗證 (MIME Type, Size)
  * 2. 圖片前端壓縮 (使用 Canvas)
- * 3. 顯示本次上傳容量
+ * 3. 顯示目前貯體已使用容量
  * 4. 上傳進度條與狀態提示
  */
 export function UploadForm({
@@ -31,6 +31,9 @@ export function UploadForm({
   const [loading, setLoading] = useState(false);
   const [path, setPath] = useState(currentPath);
   const [progress, setProgress] = useState(0);
+  const [bucketUsageBytes, setBucketUsageBytes] = useState<number | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+  const [usageError, setUsageError] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const resetFeedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,6 +57,32 @@ export function UploadForm({
     };
   }, []);
 
+  const fetchBucketUsage = useCallback(async () => {
+    setUsageLoading(true);
+    try {
+      setUsageError('');
+      const response = await fetch('/api/media/usage');
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch usage');
+      }
+
+      const data = await response.json();
+      const parsed = Number(data?.totalBytes);
+      setBucketUsageBytes(Number.isFinite(parsed) ? parsed : 0);
+    } catch (error) {
+      console.error('Failed to load bucket usage', error);
+      setBucketUsageBytes(null);
+      setUsageError('無法取得目前容量，請稍後再試。');
+    } finally {
+      setUsageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchBucketUsage();
+  }, [fetchBucketUsage]);
+
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0B';
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -70,10 +99,15 @@ export function UploadForm({
   const imageSizeLabel = formatSizeLabel(MAX_IMAGE_SIZE_MB);
   const videoSizeLabel = formatSizeLabel(MAX_VIDEO_SIZE_MB);
 
-  const selectedBytes = files.reduce((sum, file) => sum + file.size, 0);
-  const overLimit = selectedBytes > BUCKET_LIMIT_BYTES;
-  const usagePercent = Math.min((selectedBytes / BUCKET_LIMIT_BYTES) * 100, 150);
-  const usageLabel = `${formatBytes(selectedBytes)} / 10GB`;
+  const totalUsageBytes = bucketUsageBytes ?? 0;
+  const overLimit = bucketUsageBytes !== null && totalUsageBytes > BUCKET_LIMIT_BYTES;
+  const usagePercent = Math.min((totalUsageBytes / BUCKET_LIMIT_BYTES) * 100, 150);
+  const usageLabel =
+    bucketUsageBytes === null
+      ? usageLoading
+        ? '讀取中...'
+        : '—'
+      : `${formatBytes(totalUsageBytes)} / 10GB`;
 
   // 針對圖片使用 canvas 降解析度後輸出，降低檔案大小
   const compressImage = async (file: File) => {
@@ -145,7 +179,7 @@ export function UploadForm({
     }
 
     if (overLimit) {
-      const confirmed = window.confirm('本次上傳容量估計已超過 10GB，確定要繼續嗎？');
+      const confirmed = window.confirm('目前貯體容量已超過 10GB，確定仍要上傳嗎？');
       if (!confirmed) {
         updateStatus('已取消上傳。', 'info');
         return;
@@ -223,7 +257,7 @@ export function UploadForm({
           setStatus('');
           setStatusTone('info');
         }, 5000);
-
+        void fetchBucketUsage();
       }
     } catch (error) {
       updateStatus('上傳時發生錯誤，請稍後再試。', 'error');
@@ -245,7 +279,7 @@ export function UploadForm({
       </div>
       <div className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
         <div className="flex items-center justify-between text-xs font-semibold text-emerald-200">
-          <span>本次上傳容量（前端估算）</span>
+          <span>目前貯體用量（全部媒體總和）</span>
           <span className={overLimit ? 'text-amber-200' : 'text-emerald-100'}>{usageLabel}</span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-slate-800">
@@ -256,7 +290,10 @@ export function UploadForm({
             style={{ width: `${usagePercent}%` }}
           />
         </div>
-        <p className="text-xs text-slate-400">不包含既有檔案，僅計算此批選取的媒體總大小。</p>
+        <p className="text-xs text-slate-400">
+          已含所有資料夾中的媒體總大小；若超過 10GB，請先清理空間後再上傳。
+        </p>
+        {usageError && <p className="text-xs font-semibold text-amber-200">{usageError}</p>}
       </div>
       <label className="flex flex-col gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-4 text-sm text-slate-300">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">選擇檔案</span>

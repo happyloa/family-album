@@ -28,6 +28,10 @@ export type MediaListing = {
   files: MediaFile[];
 };
 
+export type BucketUsage = {
+  totalBytes: number;
+};
+
 const MAX_FILE_NAME_LENGTH = 255;
 
 const processEnv = typeof process !== 'undefined' ? process.env : undefined;
@@ -332,6 +336,30 @@ export async function listMedia(prefix = ''): Promise<MediaListing> {
     folders,
     files
   } satisfies MediaListing;
+}
+
+// 計算整個 Bucket 的已使用容量（以位元組為單位）
+export async function calculateBucketUsage(): Promise<BucketUsage> {
+  let continuationToken: string | undefined;
+  let totalBytes = 0;
+
+  do {
+    const listUrl = buildListUrl('', { continuationToken });
+    const response = await signedFetch(listUrl.toString());
+
+    if (!response.ok) {
+      throw new Error(`Failed to calculate bucket usage: ${response.status} ${response.statusText}`);
+    }
+
+    const { contents, nextContinuationToken } = parseListResult(await response.text(), '', false, {
+      includePrefixObject: true
+    });
+
+    totalBytes += contents.reduce((sum, item) => sum + (item.size ?? 0), 0);
+    continuationToken = nextContinuationToken;
+  } while (continuationToken);
+
+  return { totalBytes } satisfies BucketUsage;
 }
 
 // 上傳檔案至 R2
