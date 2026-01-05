@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { MediaFile } from './types';
@@ -100,16 +101,18 @@ export function MediaThumbnail({ media }: { media: MediaFile }) {
         }`}
       />
       {media.type === 'image' ? (
-        <img
+        <Image
           src={media.url}
           alt={media.key}
-          loading="lazy"
-          className={`h-full w-full object-cover transition-[opacity,filter,transform] duration-500 ${
+          fill
+          sizes="(min-width: 1024px) 25vw, 50vw"
+          className={`object-cover transition-[opacity,filter,transform] duration-500 ${
             isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-80 blur-xl scale-105'
           }`}
-          onLoad={handleReady}
+          placeholder="blur"
+          blurDataURL={BLUR_PLACEHOLDER}
+          onLoadingComplete={handleReady}
           onError={handleReady}
-          style={{ backgroundImage: `url(${BLUR_PLACEHOLDER})`, backgroundSize: 'cover' }}
         />
       ) : (
         <>
