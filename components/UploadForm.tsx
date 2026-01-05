@@ -279,7 +279,7 @@ export function UploadForm({
       </div>
       <div className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
         <div className="flex items-center justify-between text-xs font-semibold text-emerald-200">
-          <span>目前貯體用量（全部媒體總和）</span>
+          <span>目前貯體用量</span>
           <span className={overLimit ? 'text-amber-200' : 'text-emerald-100'}>{usageLabel}</span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-slate-800">
