@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   MAX_IMAGE_SIZE_MB,
   MAX_VIDEO_SIZE_MB,
@@ -12,7 +12,7 @@ import {
  * 負責處理：
  * 1. 檔案選取與驗證 (MIME Type, Size)
  * 2. 圖片前端壓縮 (使用 Canvas)
- * 3. 顯示 Bucket 使用量
+ * 3. 顯示本次上傳容量
  * 4. 上傳進度條與狀態提示
  */
 export function UploadForm({
@@ -31,9 +31,6 @@ export function UploadForm({
   const [loading, setLoading] = useState(false);
   const [path, setPath] = useState(currentPath);
   const [progress, setProgress] = useState(0);
-  const [usageBytes, setUsageBytes] = useState(0);
-  const [usageLoading, setUsageLoading] = useState(true);
-  const [usageError, setUsageError] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const resetFeedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -73,48 +70,10 @@ export function UploadForm({
   const imageSizeLabel = formatSizeLabel(MAX_IMAGE_SIZE_MB);
   const videoSizeLabel = formatSizeLabel(MAX_VIDEO_SIZE_MB);
 
-  // 重新整理 Bucket 使用量 (呼叫 API)
-  const refreshBucketUsage = useCallback(async () => {
-    setUsageLoading(true);
-    setUsageError('');
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timeoutId = controller ? window.setTimeout(() => controller.abort(), 10000) : null;
-
-    try {
-      const headers = adminToken ? { 'x-admin-token': adminToken } : undefined;
-      const response = await fetch('/api/usage', { signal: controller?.signal, headers });
-      if (!response.ok) {
-        throw new Error('Failed to fetch usage');
-      }
-
-      const data: { bytes?: number } = await response.json();
-      setUsageBytes(data.bytes ?? 0);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        setUsageError('取得 bucket 使用量逾時');
-        return;
-      }
-
-      setUsageError('無法取得 bucket 使用量');
-    } finally {
-      setUsageLoading(false);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    }
-  }, [adminToken]);
-
-  useEffect(() => {
-    void refreshBucketUsage();
-  }, [refreshBucketUsage]);
-
-  const overLimit = usageBytes > BUCKET_LIMIT_BYTES;
-  const usagePercent = Math.min((usageBytes / BUCKET_LIMIT_BYTES) * 100, 150);
-  const usageLabel = usageLoading
-    ? '容量計算中...'
-    : usageError
-      ? usageError
-      : `${formatBytes(usageBytes)} / 10GB`;
+  const selectedBytes = files.reduce((sum, file) => sum + file.size, 0);
+  const overLimit = selectedBytes > BUCKET_LIMIT_BYTES;
+  const usagePercent = Math.min((selectedBytes / BUCKET_LIMIT_BYTES) * 100, 150);
+  const usageLabel = `${formatBytes(selectedBytes)} / 10GB`;
 
   // 針對圖片使用 canvas 降解析度後輸出，降低檔案大小
   const compressImage = async (file: File) => {
@@ -185,10 +144,10 @@ export function UploadForm({
       return;
     }
 
-    if (!usageLoading && !usageError && overLimit) {
-      const confirmed = window.confirm('目前 R2 容量已超過 10GB，持續上傳可能會被 Cloudflare 計費，確定要繼續嗎？');
+    if (overLimit) {
+      const confirmed = window.confirm('本次上傳容量估計已超過 10GB，確定要繼續嗎？');
       if (!confirmed) {
-        updateStatus('已取消上傳以避免額外費用。', 'info');
+        updateStatus('已取消上傳。', 'info');
         return;
       }
     }
@@ -265,7 +224,6 @@ export function UploadForm({
           setStatusTone('info');
         }, 5000);
 
-        void refreshBucketUsage();
       }
     } catch (error) {
       updateStatus('上傳時發生錯誤，請稍後再試。', 'error');
@@ -287,7 +245,7 @@ export function UploadForm({
       </div>
       <div className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
         <div className="flex items-center justify-between text-xs font-semibold text-emerald-200">
-          <span>Bucket 使用量</span>
+          <span>本次上傳容量（前端估算）</span>
           <span className={overLimit ? 'text-amber-200' : 'text-emerald-100'}>{usageLabel}</span>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-slate-800">
@@ -298,9 +256,7 @@ export function UploadForm({
             style={{ width: `${usagePercent}%` }}
           />
         </div>
-        <p className="text-xs text-slate-400">
-          以 10GB 為免費額度計算，超過後 Cloudflare R2 可能會收取儲存與傳輸費用。
-        </p>
+        <p className="text-xs text-slate-400">不包含既有檔案，僅計算此批選取的媒體總大小。</p>
       </div>
       <label className="flex flex-col gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/60 p-4 text-sm text-slate-300">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">選擇檔案</span>

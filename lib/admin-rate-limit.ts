@@ -1,11 +1,5 @@
 import { NextResponse } from 'next/server';
 
-type KvNamespace = {
-  get: (key: string) => Promise<string | null>;
-  put: (key: string, value: string, options?: { expirationTtl?: number }) => Promise<void>;
-  delete: (key: string) => Promise<void>;
-};
-
 type MemoryEntry = {
   count: number;
   expiresAt: number;
@@ -39,65 +33,35 @@ export const ADMIN_RATE_LIMIT_MAX_FAILURES = readPositiveInt(
 const ADMIN_RATE_LIMIT_KEY_PREFIX = 'admin-failure';
 const ADMIN_RATE_LIMIT_WINDOW_SECONDS = Math.ceil(ADMIN_RATE_LIMIT_WINDOW_MS / 1000);
 
-// 記憶體內存 (fallback 用，適用於非 Serverless 或單一實例環境)
+// 記憶體內存（適用於單一實例環境）
 const memoryStore = new Map<string, MemoryEntry>();
 
-// 取得 Cloudflare KV Binding (如果有的話)
-function getKvBinding(): KvNamespace | null {
-  const globalBinding = (globalThis as { ADMIN_RATE_LIMIT_KV?: KvNamespace }).ADMIN_RATE_LIMIT_KV;
-  return globalBinding ?? null;
-}
-
-// 取得儲存後端 (優先使用 KV，其次 Memory)
-function getStore(): RateLimitStore {
-  const kv = getKvBinding();
-
-  if (kv) {
-    return {
-      async getCount(key: string) {
-        const value = await kv.get(key);
-        const parsed = value ? Number.parseInt(value, 10) : 0;
-        return Number.isNaN(parsed) ? 0 : parsed;
-      },
-      async increment(key: string, ttlSeconds: number) {
-        const current = await this.getCount(key);
-        const next = current + 1;
-        await kv.put(key, String(next), { expirationTtl: ttlSeconds });
-        return next;
-      },
-      async reset(key: string) {
-        await kv.delete(key);
-      }
-    };
-  }
-
-  return {
-    async getCount(key: string) {
-      const entry = memoryStore.get(key);
-      if (!entry) return 0;
-      if (Date.now() > entry.expiresAt) {
-        memoryStore.delete(key);
-        return 0;
-      }
-      return entry.count;
-    },
-    async increment(key: string, ttlSeconds: number) {
-      const now = Date.now();
-      const entry = memoryStore.get(key);
-      if (!entry || now > entry.expiresAt) {
-        const expiresAt = now + ttlSeconds * 1000;
-        memoryStore.set(key, { count: 1, expiresAt });
-        return 1;
-      }
-      const next = entry.count + 1;
-      memoryStore.set(key, { count: next, expiresAt: entry.expiresAt });
-      return next;
-    },
-    async reset(key: string) {
+const memoryStoreAdapter: RateLimitStore = {
+  async getCount(key: string) {
+    const entry = memoryStore.get(key);
+    if (!entry) return 0;
+    if (Date.now() > entry.expiresAt) {
       memoryStore.delete(key);
+      return 0;
     }
-  };
-}
+    return entry.count;
+  },
+  async increment(key: string, ttlSeconds: number) {
+    const now = Date.now();
+    const entry = memoryStore.get(key);
+    if (!entry || now > entry.expiresAt) {
+      const expiresAt = now + ttlSeconds * 1000;
+      memoryStore.set(key, { count: 1, expiresAt });
+      return 1;
+    }
+    const next = entry.count + 1;
+    memoryStore.set(key, { count: next, expiresAt: entry.expiresAt });
+    return next;
+  },
+  async reset(key: string) {
+    memoryStore.delete(key);
+  }
+};
 
 // 取得客戶端 IP
 function getClientIp(request: Request): string {
@@ -125,7 +89,7 @@ export type AdminRateLimiter = {
  * 使用 IP 作為 Key，限制短時間內的嘗試次數，防止暴力破解
  */
 export function createAdminRateLimiter(request: Request): AdminRateLimiter {
-  const store = getStore();
+  const store = memoryStoreAdapter;
   const ip = getClientIp(request);
   const key = buildKey(ip);
 
