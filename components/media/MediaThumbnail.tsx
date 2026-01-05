@@ -105,6 +105,7 @@ export function MediaThumbnail({ media }: { media: MediaFile }) {
           src={media.url}
           alt={media.key}
           fill
+          unoptimized
           className={`object-cover transition-[opacity,filter,transform] duration-500 ${
             isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-80 blur-xl scale-105'
           }`}
