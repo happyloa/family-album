@@ -112,7 +112,12 @@ export function useMediaActions({
 
         pushMessage('已更新名稱', 'success');
         setAdminAction(null);
+
+        // R2 列表刪除有時存在延遲，先立即更新再延遲重新整理以避免舊名稱暫時出現
         await loadMedia(currentPrefix);
+        window.setTimeout(() => {
+          void loadMedia(currentPrefix);
+        }, 1500);
       } catch (error) {
         pushMessage('重新命名時發生錯誤，請稍後再試。', 'error');
       }
