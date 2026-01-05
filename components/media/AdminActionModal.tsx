@@ -47,8 +47,6 @@ export function AdminActionModal({
   onCancel,
   onConfirm
 }: AdminActionModalProps) {
-  if (!action || !target) return null;
-
   const currentName = useMemo(() => {
     if (!target) return '';
     return target.key.split('/').pop() ?? target.key;
