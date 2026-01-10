@@ -261,6 +261,20 @@ export function AdminActionModal({
           {errorMessage && <p className="text-sm text-rose-300">{errorMessage}</p>}
           {!errorMessage && helperMessage && <p className="text-sm text-emerald-200">{helperMessage}</p>}
 
+          {isSubmitting && (
+            <div className="flex items-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              <span
+                className="h-4 w-4 animate-spin rounded-full border-2 border-amber-200/70 border-t-transparent"
+                aria-hidden="true"
+              />
+              <span>
+                {action === 'rename' && '正在處理中，若內容較多可能需要數秒...'}
+                {action === 'move' && '正在搬移中，請稍候...'}
+                {action === 'delete' && '正在刪除中...'}
+              </span>
+            </div>
+          )}
+
           <div className="flex flex-col gap-3 border-t border-slate-800 pt-4 sm:flex-row sm:justify-end">
             <button
               className="rounded-full border border-slate-700 px-5 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
