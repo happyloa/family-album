@@ -330,10 +330,21 @@ async function collectKeys(
   return keys;
 }
 
-// 批次刪除物件
-async function deleteObjects(keys: string[]) {
-  while (keys.length > 0) {
-    const batch = keys.splice(0, 1000);
+// 批次刪除物件（支援進度回報）
+type DeleteObjectsOptions = {
+  onProgress?: (deletedCount: number, totalCount: number) => void;
+};
+
+async function deleteObjects(
+  keys: string[],
+  options: DeleteObjectsOptions = {}
+) {
+  const totalCount = keys.length;
+  let deletedCount = 0;
+  const keysToDelete = [...keys]; // 複製陣列避免修改原陣列
+
+  while (keysToDelete.length > 0) {
+    const batch = keysToDelete.splice(0, 1000);
     const deleteUrl = buildEndpointPath(`/${getEnv().R2_BUCKET_NAME}?delete`);
     const deleteBody = `<Delete>${batch
       .map((key) => `<Object><Key>${escapeXml(key)}</Key></Object>`)
@@ -352,6 +363,9 @@ async function deleteObjects(keys: string[]) {
         `Failed to delete objects: ${deleteResponse.status} ${deleteResponse.statusText}`
       );
     }
+
+    deletedCount += batch.length;
+    options.onProgress?.(deletedCount, totalCount);
   }
 }
 
