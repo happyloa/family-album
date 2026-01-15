@@ -3,6 +3,8 @@ import { Noto_Sans_TC } from 'next/font/google';
 import './globals.css';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 // 設定字型：使用 Noto Sans TC (繁體中文)
 const notoSans = Noto_Sans_TC({
@@ -31,26 +33,30 @@ export const metadata: Metadata = {
 
 /**
  * RootLayout: 應用程式的根佈局
- * 包含全域樣式、字型設定以及背景效果
+ * 包含全域樣式、字型設定、主題切換以及背景效果
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-Hant" className={`bg-stone-950 ${notoSans.className}`}>
-      <body className="min-h-screen bg-gradient-to-b from-stone-950 via-stone-950/95 to-stone-900 text-stone-100 antialiased">
-        {/* 背景裝飾效果：溫暖的琥珀光暈 */}
-        <div className="pointer-events-none fixed inset-0 -z-10 select-none overflow-hidden" aria-hidden>
-          {/* 主光暈 */}
-          <div className="absolute -left-[20%] -top-[30%] h-[60%] w-[60%] rounded-full bg-amber-500/[0.03] blur-[120px]" />
-          <div className="absolute -right-[10%] top-[10%] h-[40%] w-[40%] rounded-full bg-orange-500/[0.04] blur-[100px]" />
-          <div className="absolute bottom-[10%] left-[30%] h-[35%] w-[35%] rounded-full bg-amber-600/[0.03] blur-[80px]" />
-          {/* 細緻光點裝飾 */}
-          <div className="absolute right-[20%] top-[40%] h-2 w-2 rounded-full bg-amber-400/20 blur-sm" />
-          <div className="absolute left-[15%] top-[60%] h-1.5 w-1.5 rounded-full bg-orange-300/15 blur-sm" />
-        </div>
-        {/* 主要內容區域（包含 Error Boundary 保護） */}
-        <main className="mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-8 lg:px-12">
-          <ErrorBoundary>{children}</ErrorBoundary>
-        </main>
+    <html lang="zh-Hant" className={`bg-surface-950 ${notoSans.className}`} suppressHydrationWarning>
+      <body className="min-h-screen bg-gradient-to-b from-surface-950 via-surface-950/95 to-surface-900 text-surface-100 antialiased">
+        <ThemeProvider>
+          {/* 背景裝飾效果 */}
+          <div className="pointer-events-none fixed inset-0 -z-10 select-none overflow-hidden" aria-hidden>
+            {/* 主光暈 */}
+            <div className="absolute -left-[20%] -top-[30%] h-[60%] w-[60%] rounded-full bg-primary-500/[0.03] blur-[120px]" />
+            <div className="absolute -right-[10%] top-[10%] h-[40%] w-[40%] rounded-full bg-primary-600/[0.04] blur-[100px]" />
+            <div className="absolute bottom-[10%] left-[30%] h-[35%] w-[35%] rounded-full bg-primary-700/[0.03] blur-[80px]" />
+            {/* 細緻光點裝飾 */}
+            <div className="absolute right-[20%] top-[40%] h-2 w-2 rounded-full bg-primary-400/20 blur-sm" />
+            <div className="absolute left-[15%] top-[60%] h-1.5 w-1.5 rounded-full bg-primary-300/15 blur-sm" />
+          </div>
+          {/* 主要內容區域（包含 Error Boundary 保護） */}
+          <main className="mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-8 lg:px-12">
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </main>
+          {/* 主題切換按鈕 */}
+          <ThemeToggle />
+        </ThemeProvider>
       </body>
     </html>
   );

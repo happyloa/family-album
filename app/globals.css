@@ -2,31 +2,37 @@
 
 /* Tailwind CSS 4 - CSS-based 主題配置 */
 @theme {
-  /* 自訂配色：溫暖琥珀金色系 */
-  --color-primary-50: #fffbeb;
-  --color-primary-100: #fef3c7;
-  --color-primary-200: #fde68a;
-  --color-primary-300: #fcd34d;
-  --color-primary-400: #fbbf24;
-  --color-primary-500: #f59e0b;
-  --color-primary-600: #d97706;
-  --color-primary-700: #b45309;
-  --color-primary-800: #92400e;
-  --color-primary-900: #78350f;
-  --color-primary-950: #451a03;
+  /* 語意化顏色變數 - 將被主題覆寫 */
+  --color-primary-50: var(--theme-primary-50);
+  --color-primary-100: var(--theme-primary-100);
+  --color-primary-200: var(--theme-primary-200);
+  --color-primary-300: var(--theme-primary-300);
+  --color-primary-400: var(--theme-primary-400);
+  --color-primary-500: var(--theme-primary-500);
+  --color-primary-600: var(--theme-primary-600);
+  --color-primary-700: var(--theme-primary-700);
+
+  --color-surface-50: var(--theme-surface-50);
+  --color-surface-100: var(--theme-surface-100);
+  --color-surface-200: var(--theme-surface-200);
+  --color-surface-300: var(--theme-surface-300);
+  --color-surface-400: var(--theme-surface-400);
+  --color-surface-500: var(--theme-surface-500);
+  --color-surface-600: var(--theme-surface-600);
+  --color-surface-700: var(--theme-surface-700);
+  --color-surface-800: var(--theme-surface-800);
+  --color-surface-900: var(--theme-surface-900);
+  --color-surface-950: var(--theme-surface-950);
 
   /* 自訂陰影 */
-  --shadow-glow: 0 8px 32px rgba(251, 191, 36, 0.2),
+  --shadow-glow: 0 8px 32px var(--theme-glow-color),
     0 0 0 1px rgba(255, 255, 255, 0.05);
-  --shadow-glow-lg: 0 12px 48px rgba(251, 191, 36, 0.25),
-    0 0 0 1px rgba(251, 191, 36, 0.1);
-  --shadow-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  --shadow-glow-lg: 0 12px 48px var(--theme-glow-color-lg),
+    0 0 0 1px var(--theme-glow-ring);
 
   /* 自訂動畫 */
   --animate-fade-in: fade-in 0.3s ease-out;
   --animate-slide-up: slide-up 0.3s ease-out;
-  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 
   @keyframes fade-in {
     0% {
@@ -49,69 +55,115 @@
   }
 }
 
-:root {
+/* ===== 暖色調主題 (預設) ===== */
+:root,
+[data-theme="warm"] {
   color-scheme: dark;
-  background-color: #0a0908;
+
+  /* Primary: Amber/Orange */
+  --theme-primary-50: #fffbeb;
+  --theme-primary-100: #fef3c7;
+  --theme-primary-200: #fde68a;
+  --theme-primary-300: #fcd34d;
+  --theme-primary-400: #fbbf24;
+  --theme-primary-500: #f59e0b;
+  --theme-primary-600: #d97706;
+  --theme-primary-700: #b45309;
+
+  /* Surface: Stone */
+  --theme-surface-50: #fafaf9;
+  --theme-surface-100: #f5f5f4;
+  --theme-surface-200: #e7e5e4;
+  --theme-surface-300: #d6d3d1;
+  --theme-surface-400: #a8a29e;
+  --theme-surface-500: #78716c;
+  --theme-surface-600: #57534e;
+  --theme-surface-700: #44403c;
+  --theme-surface-800: #292524;
+  --theme-surface-900: #1c1917;
+  --theme-surface-950: #0c0a09;
+
+  /* Glow effects */
+  --theme-glow-color: rgba(251, 191, 36, 0.2);
+  --theme-glow-color-lg: rgba(251, 191, 36, 0.25);
+  --theme-glow-ring: rgba(251, 191, 36, 0.1);
+
+  /* Background gradients */
+  --theme-bg-primary: #0a0908;
+  --theme-gradient-from: #f59e0b;
+  --theme-gradient-to: #ea580c;
+}
+
+/* ===== 冷色調主題 ===== */
+[data-theme="cool"] {
+  /* Primary: Emerald/Cyan */
+  --theme-primary-50: #ecfdf5;
+  --theme-primary-100: #d1fae5;
+  --theme-primary-200: #a7f3d0;
+  --theme-primary-300: #6ee7b7;
+  --theme-primary-400: #34d399;
+  --theme-primary-500: #10b981;
+  --theme-primary-600: #059669;
+  --theme-primary-700: #047857;
+
+  /* Surface: Slate */
+  --theme-surface-50: #f8fafc;
+  --theme-surface-100: #f1f5f9;
+  --theme-surface-200: #e2e8f0;
+  --theme-surface-300: #cbd5e1;
+  --theme-surface-400: #94a3b8;
+  --theme-surface-500: #64748b;
+  --theme-surface-600: #475569;
+  --theme-surface-700: #334155;
+  --theme-surface-800: #1e293b;
+  --theme-surface-900: #0f172a;
+  --theme-surface-950: #020617;
+
+  /* Glow effects */
+  --theme-glow-color: rgba(16, 185, 129, 0.25);
+  --theme-glow-color-lg: rgba(56, 189, 248, 0.2);
+  --theme-glow-ring: rgba(56, 189, 248, 0.1);
+
+  /* Background gradients */
+  --theme-bg-primary: #010817;
+  --theme-gradient-from: #34d399;
+  --theme-gradient-to: #22d3ee;
 }
 
 body {
   margin: 0;
-  background: radial-gradient(
+  background-color: var(--theme-bg-primary);
+  background-image: radial-gradient(
       ellipse at 0% 0%,
-      rgba(251, 191, 36, 0.06) 0,
+      color-mix(in srgb, var(--theme-primary-400) 6%, transparent) 0,
       transparent 50%
     ),
     radial-gradient(
       ellipse at 100% 0%,
-      rgba(245, 158, 11, 0.04) 0,
+      color-mix(in srgb, var(--theme-primary-500) 4%, transparent) 0,
       transparent 40%
     ),
     radial-gradient(
       ellipse at 50% 100%,
-      rgba(180, 83, 9, 0.05) 0,
+      color-mix(in srgb, var(--theme-primary-700) 5%, transparent) 0,
       transparent 50%
-    ),
-    linear-gradient(165deg, #0a0908 0%, #0d0c0a 40%, #0f0e0c 100%);
+    );
 }
 
-/* 主視覺卡片：溫暖質感的玻璃效果 */
+/* 主視覺卡片：玻璃效果 */
 .glass-card {
   backdrop-filter: blur(12px) saturate(1.2);
   background: linear-gradient(
     135deg,
-    rgba(28, 25, 23, 0.95) 0%,
-    rgba(23, 20, 18, 0.88) 50%,
-    rgba(28, 25, 23, 0.92) 100%
+    color-mix(in srgb, var(--theme-surface-800) 95%, transparent) 0%,
+    color-mix(in srgb, var(--theme-surface-900) 88%, transparent) 50%,
+    color-mix(in srgb, var(--theme-surface-800) 92%, transparent) 100%
   );
-  border: 1px solid rgba(245, 158, 11, 0.15);
+  border: 1px solid
+    color-mix(in srgb, var(--theme-primary-500) 15%, transparent);
   box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(251, 191, 36, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-}
-
-/* 背景網格效果 */
-.bg-mesh {
-  background-image: radial-gradient(
-      circle at 15% 15%,
-      rgba(251, 191, 36, 0.08) 0,
-      transparent 25%
-    ),
-    radial-gradient(
-      circle at 85% 20%,
-      rgba(245, 158, 11, 0.06) 0,
-      transparent 30%
-    ),
-    radial-gradient(
-      circle at 40% 90%,
-      rgba(180, 83, 9, 0.07) 0,
-      transparent 25%
-    ),
-    linear-gradient(160deg, rgba(28, 25, 23, 0.9), rgba(15, 14, 12, 0.95));
-}
-
-/* 金色邊框光暈 */
-.neon-border {
-  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.25),
-    0 8px 40px rgba(245, 158, 11, 0.15), 0 0 24px rgba(251, 191, 36, 0.08);
+    0 0 0 1px color-mix(in srgb, var(--theme-primary-400) 8%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 /* 自訂捲軸 */
@@ -121,22 +173,40 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1c1917;
+  background: var(--theme-surface-900);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+  background: linear-gradient(
+    180deg,
+    var(--theme-primary-600) 0%,
+    var(--theme-primary-700) 100%
+  );
   border-radius: 4px;
-  border: 2px solid #1c1917;
+  border: 2px solid var(--theme-surface-900);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(
+    180deg,
+    var(--theme-primary-500) 0%,
+    var(--theme-primary-600) 100%
+  );
 }
 
 /* 選取文字顏色 */
 ::selection {
-  background: rgba(251, 191, 36, 0.3);
-  color: #fef3c7;
+  background: color-mix(in srgb, var(--theme-primary-400) 30%, transparent);
+  color: var(--theme-primary-100);
+}
+
+/* 主題切換過渡效果 */
+html {
+  transition: background-color 0.3s ease;
+}
+
+body,
+.glass-card {
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }

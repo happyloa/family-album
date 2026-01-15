@@ -37,19 +37,10 @@ type PreviewState = {
 /**
  * MediaGrid Component: 專案核心元件
  * 整合了媒體瀏覽、資料夾導覽、管理員權限驗證、上傳與檔案操作功能。
- *
- * 為了避免 God Component 問題，邏輯已拆分為多個 Custom Hooks：
- * - useMessage: 處理全域訊息提示
- * - useMediaData: 處理 API 資料載入、過濾與分頁
- * - useAdminAuth: 處理管理員權限、Token 驗證與過期
- * - useMediaActions: 處理資料夾建立、重新命名與刪除等操作
- * - useMediaDragDrop: 處理拖曳移動檔案的邏輯
  */
 export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
-  // 訊息提示 Hook
   const { message, messageTone, pushMessage } = useMessage();
 
-  // 媒體資料與瀏覽狀態 Hook
   const {
     files,
     folders,
@@ -70,7 +61,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     searchEnabled
   } = useMediaData({ pushMessage, refreshToken });
 
-  // 管理員權限 Hook
   const {
     adminToken,
     adminInput,
@@ -82,7 +72,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     authorizedFetch
   } = useAdminAuth({ pushMessage });
 
-  // 檔案操作 Hook (建立、刪除、重新命名)
   const {
     newFolderName,
     setNewFolderName,
@@ -99,7 +88,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     currentPrefix
   });
 
-  // 拖曳功能 Hook
   const { isDraggingMedia, handleMediaDragStart, handleMediaDragEnd, moveDraggedMediaTo } = useMediaDragDrop({
     isAdmin,
     currentPrefix,
@@ -110,17 +98,14 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
   const [preview, setPreview] = useState<PreviewState>({ media: null, trigger: null });
 
-  // 計算目前深度，防止超過兩層資料夾
   const depth = Math.min(getDepth(currentPrefix), MAX_FOLDER_DEPTH);
 
-  // 產生麵包屑導覽結構
   const breadcrumbTrail: Breadcrumb[] = useMemo(() => {
     const parts = currentPrefix.split('/').filter(Boolean);
     const nested = parts.map((part, index, arr) => ({ label: part, key: arr.slice(0, index + 1).join('/') }));
     return [{ label: '根目錄', key: '' }, ...nested];
   }, [currentPrefix]);
 
-  // 計算上一層路徑 (用於 "回到上一層" 功能)
   const parentPrefix = useMemo(() => {
     if (!currentPrefix) return null;
     const parts = currentPrefix.split('/').filter(Boolean);
@@ -128,18 +113,15 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     return parts.join('/');
   }, [currentPrefix]);
 
-  // 進入資料夾
   const handleEnterFolder = (folderKey: string) => {
     if (getDepth(folderKey) > MAX_FOLDER_DEPTH) {
       pushMessage('資料夾層數最多兩層', 'error');
       return;
     }
-
-    pushMessage('', 'info'); // 清空訊息
+    pushMessage('', 'info');
     setCurrentPrefix(folderKey);
   };
 
-  // 回到上一層
   const handleBack = () => {
     if (!currentPrefix) return;
     const parts = currentPrefix.split('/').filter(Boolean);
@@ -162,16 +144,16 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     <section className="relative space-y-6">
       <MessageToast message={message} tone={messageTone} />
 
-      {/* 控制面板：顯示標題與管理員登入區塊 */}
-      <div className="glass-card rounded-3xl border border-stone-700/50 bg-stone-900/80 p-6 shadow-xl ring-1 ring-white/5 sm:p-8">
+      {/* 控制面板 */}
+      <div className="glass-card rounded-3xl border border-surface-700/50 bg-surface-900/80 p-6 shadow-xl ring-1 ring-white/5 sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
-              <p className="text-sm font-semibold text-amber-400">R2 即時同步</p>
+              <div className="h-2 w-2 rounded-full bg-primary-500 shadow-[0_0_8px_var(--theme-glow-color)]" />
+              <p className="text-sm font-semibold text-primary-400">R2 即時同步</p>
             </div>
             <h2 className="text-2xl font-bold text-white">媒體控制台</h2>
-            <p className="text-sm leading-relaxed text-stone-400">
+            <p className="text-sm leading-relaxed text-surface-400">
               快速檢視路徑、啟用安全管理密碼，並在需要時開啟管理模式處理上傳與編輯。
             </p>
           </div>
@@ -188,7 +170,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           />
         </div>
 
-        {/* 管理功能區：建立資料夾與上傳 (僅管理員可見) */}
         {isAdmin && (
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <FolderCreator
@@ -201,7 +182,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         )}
       </div>
 
-      {/* 導覽列：麵包屑與重新整理按鈕 */}
       <BreadcrumbNav
         breadcrumbTrail={breadcrumbTrail}
         currentPrefix={currentPrefix}
@@ -215,10 +195,9 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         depth={depth}
       />
 
-      {/* 拖曳區：拖曳檔案到上一層 */}
       {isAdmin && isDraggingMedia && parentPrefix !== null && (
         <div
-          className="flex items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-amber-400/60 bg-amber-500/10 px-4 py-3 text-amber-50"
+          className="flex items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-primary-400/60 bg-primary-500/10 px-4 py-3 text-primary-50"
           onDragOver={(event) => {
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
@@ -234,7 +213,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             <span className="text-lg">⬆️</span>
             <span>放到上一層</span>
           </div>
-          <p className="text-xs text-amber-100/80">將拖曳中的媒體移動到「{parentPrefix || '根目錄'}」</p>
+          <p className="text-xs text-primary-100/80">將拖曳中的媒體移動到「{parentPrefix || '根目錄'}」</p>
         </div>
       )}
 
@@ -281,7 +260,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         </>
       )}
 
-      {/* 管理操作確認對話框 (刪除、移動、更名) */}
       <AdminActionModal
         key={adminAction ? `${adminAction.action}-${adminAction.target.key}-${currentPrefix}` : 'idle'}
         action={adminAction?.action ?? null}
@@ -296,7 +274,6 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         onConfirm={handleAdminActionConfirm}
       />
 
-      {/* 媒體預覽彈窗 */}
       <MediaPreviewModal
         media={preview.media}
         onClose={() => setPreview({ media: null, trigger: null })}
