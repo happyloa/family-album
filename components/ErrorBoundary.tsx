@@ -42,15 +42,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
             return (
                 <div className="flex min-h-[400px] items-center justify-center p-8">
-                    <div className="max-w-md space-y-4 rounded-3xl border border-rose-500/30 bg-slate-900/90 p-8 text-center shadow-2xl">
+                    <div className="max-w-md space-y-4 rounded-3xl border border-red-500/30 bg-stone-900/90 p-8 text-center shadow-2xl">
                         <div className="text-4xl">⚠️</div>
                         <h2 className="text-xl font-bold text-white">發生錯誤</h2>
-                        <p className="text-sm text-slate-300">
+                        <p className="text-sm text-stone-300">
                             應用程式遇到了意外問題。請嘗試重新整理頁面，或稍後再試。
                         </p>
                         {this.state.error && (
-                            <details className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-3 text-left text-xs text-slate-400">
-                                <summary className="cursor-pointer font-semibold text-slate-300">技術細節</summary>
+                            <details className="mt-4 rounded-xl border border-stone-700 bg-stone-950/60 p-3 text-left text-xs text-stone-400">
+                                <summary className="cursor-pointer font-semibold text-stone-300">技術細節</summary>
                                 <pre className="mt-2 overflow-auto whitespace-pre-wrap break-all">
                                     {this.state.error.message}
                                 </pre>
@@ -58,14 +58,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                         )}
                         <div className="flex justify-center gap-3 pt-2">
                             <button
-                                className="rounded-full border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-400"
+                                className="rounded-full border border-stone-600 px-4 py-2 text-sm font-semibold text-stone-200 transition-all duration-200 hover:border-stone-400 cursor-pointer"
                                 type="button"
                                 onClick={this.handleReset}
                             >
                                 重試
                             </button>
                             <button
-                                className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300"
+                                className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-sm font-semibold text-stone-950 shadow-glow transition-all duration-200 hover:from-amber-400 hover:to-orange-400 cursor-pointer"
                                 type="button"
                                 onClick={() => window.location.reload()}
                             >

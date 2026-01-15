@@ -31,18 +31,20 @@ export function FolderGrid({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <h3 className="text-xl font-semibold text-white">資料夾</h3>
-          <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">點擊可直接進入</span>
+          <h3 className="text-xl font-bold text-white">資料夾</h3>
+          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300 ring-1 ring-amber-500/20">
+            點擊可直接進入
+          </span>
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {folders.map((folder) => (
           <article
             key={folder.key}
-            className="group relative flex cursor-pointer flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-lg transition hover:-translate-y-1 hover:border-emerald-400/50 focus-within:-translate-y-1 focus-within:border-emerald-400/50"
+            className="group relative flex cursor-pointer flex-col gap-3 rounded-2xl border border-stone-700/50 bg-stone-800/50 p-4 shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-amber-500/40 hover:bg-stone-800/80 hover:shadow-xl focus-within:-translate-y-1 focus-within:border-amber-500/40"
             role="button"
             tabIndex={0}
             onClick={() => onEnter(folder.key)}
@@ -61,16 +63,18 @@ export function FolderGrid({
             aria-label={canDropMedia ? `將媒體移動到 ${folder.name} 資料夾` : undefined}
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-2xl">📂</div>
-              <div className="space-y-1">
-                <h4 className="text-lg font-semibold text-white">{folder.name || '未命名'}</h4>
-                <p className="text-xs text-slate-400">{folder.key || '根目錄'}</p>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 text-2xl ring-1 ring-amber-500/20">
+                📂
+              </div>
+              <div className="min-w-0 flex-1 space-y-1">
+                <h4 className="truncate text-lg font-semibold text-white">{folder.name || '未命名'}</h4>
+                <p className="truncate text-xs text-stone-500">{folder.key || '根目錄'}</p>
               </div>
             </div>
             {isAdmin && (
-              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-stone-300">
                 <button
-                  className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-700 cursor-pointer"
+                  className="rounded-full bg-stone-700/50 px-3 py-1 text-xs font-semibold text-stone-200 transition-all duration-200 hover:bg-stone-700 hover:text-white cursor-pointer"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -80,7 +84,7 @@ export function FolderGrid({
                   重新命名
                 </button>
                 <button
-                  className="rounded-full bg-rose-600/20 px-3 py-1 text-xs font-semibold text-rose-100 transition hover:bg-rose-600/40 cursor-pointer"
+                  className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-300 transition-all duration-200 hover:bg-red-500/25 hover:text-red-200 cursor-pointer"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();

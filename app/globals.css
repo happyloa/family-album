@@ -1,49 +1,142 @@
 @import "tailwindcss";
 
+/* Tailwind CSS 4 - CSS-based 主題配置 */
+@theme {
+  /* 自訂配色：溫暖琥珀金色系 */
+  --color-primary-50: #fffbeb;
+  --color-primary-100: #fef3c7;
+  --color-primary-200: #fde68a;
+  --color-primary-300: #fcd34d;
+  --color-primary-400: #fbbf24;
+  --color-primary-500: #f59e0b;
+  --color-primary-600: #d97706;
+  --color-primary-700: #b45309;
+  --color-primary-800: #92400e;
+  --color-primary-900: #78350f;
+  --color-primary-950: #451a03;
+
+  /* 自訂陰影 */
+  --shadow-glow: 0 8px 32px rgba(251, 191, 36, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-glow-lg: 0 12px 48px rgba(251, 191, 36, 0.25),
+    0 0 0 1px rgba(251, 191, 36, 0.1);
+  --shadow-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+
+  /* 自訂動畫 */
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-up {
+    0% {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
 :root {
   color-scheme: dark;
-  background-color: #010817;
+  background-color: #0a0908;
 }
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.08) 0, transparent 22%),
-    radial-gradient(circle at 90% 10%, rgba(94, 234, 212, 0.08) 0, transparent 20%),
-    radial-gradient(circle at 30% 80%, rgba(129, 140, 248, 0.09) 0, transparent 26%),
-    linear-gradient(145deg, #020617 0%, #050b1e 45%, #030712 100%);
+  background: radial-gradient(
+      ellipse at 0% 0%,
+      rgba(251, 191, 36, 0.06) 0,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 100% 0%,
+      rgba(245, 158, 11, 0.04) 0,
+      transparent 40%
+    ),
+    radial-gradient(
+      ellipse at 50% 100%,
+      rgba(180, 83, 9, 0.05) 0,
+      transparent 50%
+    ),
+    linear-gradient(165deg, #0a0908 0%, #0d0c0a 40%, #0f0e0c 100%);
 }
 
-.bg-mesh {
-  background-image: radial-gradient(circle at 20% 20%, rgba(94, 234, 212, 0.15) 0, transparent 20%),
-    radial-gradient(circle at 80% 0, rgba(56, 189, 248, 0.18) 0, transparent 22%),
-    radial-gradient(circle at 50% 80%, rgba(129, 140, 248, 0.14) 0, transparent 24%),
-    linear-gradient(120deg, rgba(15, 23, 42, 0.8), rgba(2, 6, 23, 0.95));
-}
-
+/* 主視覺卡片：溫暖質感的玻璃效果 */
 .glass-card {
-  backdrop-filter: blur(10px);
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.78));
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 20px 80px rgba(15, 23, 42, 0.65), 0 0 0 1px rgba(148, 163, 184, 0.15);
+  backdrop-filter: blur(12px) saturate(1.2);
+  background: linear-gradient(
+    135deg,
+    rgba(28, 25, 23, 0.95) 0%,
+    rgba(23, 20, 18, 0.88) 50%,
+    rgba(28, 25, 23, 0.92) 100%
+  );
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(251, 191, 36, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
+/* 背景網格效果 */
+.bg-mesh {
+  background-image: radial-gradient(
+      circle at 15% 15%,
+      rgba(251, 191, 36, 0.08) 0,
+      transparent 25%
+    ),
+    radial-gradient(
+      circle at 85% 20%,
+      rgba(245, 158, 11, 0.06) 0,
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 40% 90%,
+      rgba(180, 83, 9, 0.07) 0,
+      transparent 25%
+    ),
+    linear-gradient(160deg, rgba(28, 25, 23, 0.9), rgba(15, 14, 12, 0.95));
+}
+
+/* 金色邊框光暈 */
 .neon-border {
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2), 0 8px 50px rgba(56, 189, 248, 0.12), 0 0 30px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.25),
+    0 8px 40px rgba(245, 158, 11, 0.15), 0 0 24px rgba(251, 191, 36, 0.08);
 }
 
+/* 自訂捲軸 */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #1c1917;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #22c55e, #0ea5e9);
-  border-radius: 999px;
+  background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+  border-radius: 4px;
+  border: 2px solid #1c1917;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #16a34a, #0284c7);
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+}
+
+/* 選取文字顏色 */
+::selection {
+  background: rgba(251, 191, 36, 0.3);
+  color: #fef3c7;
 }

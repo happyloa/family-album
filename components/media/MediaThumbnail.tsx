@@ -8,7 +8,7 @@ import { MediaFile } from './types';
 function MediaBadge({ type }: { type: MediaFile['type'] }) {
   return (
     <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-center justify-end text-xs font-semibold text-white">
-      <span className="rounded-lg bg-slate-900/80 px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-slate-100 ring-1 ring-slate-700">
+      <span className="rounded-lg bg-stone-900/80 px-2 py-1 text-[11px] uppercase tracking-[0.15em] text-stone-100 ring-1 ring-stone-700">
         {type === 'image' ? '圖片' : '影片'}
       </span>
     </div>
@@ -59,10 +59,10 @@ function VideoPreview({ src, alt, onReady }: { src: string; alt: string; onReady
 
   if (!canPreview) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 text-slate-100">
+      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-stone-800 via-stone-900 to-stone-950 text-stone-100">
         <div className="flex flex-col items-center gap-2 text-xs font-semibold">
-          <span className="rounded-full bg-slate-800/70 px-3 py-1 text-[11px] text-slate-200">行動裝置預覽</span>
-          <p className="text-center text-slate-300">點擊後將載入影片</p>
+          <span className="rounded-full bg-stone-800/70 px-3 py-1 text-[11px] text-stone-200">行動裝置預覽</span>
+          <p className="text-center text-stone-400">點擊後將載入影片</p>
         </div>
       </div>
     );
@@ -86,7 +86,7 @@ function VideoPreview({ src, alt, onReady }: { src: string; alt: string; onReady
 }
 
 const BLUR_PLACEHOLDER =
-  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMxNTM3NzEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMzNjg2NzYiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTIiIGhlaWdodD0iOCIgcng9IjIiIGZpbGw9InVybCgjYSkiLz48L3N2Zz4=';
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiMyODI1MjMiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM0NDQwM2MiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTIiIGhlaWdodD0iOCIgcng9IjIiIGZpbGw9InVybCgjYSkiLz48L3N2Zz4=';
 
 export function MediaThumbnail({ media }: { media: MediaFile }) {
   const [loadedUrl, setLoadedUrl] = useState('');
@@ -94,11 +94,10 @@ export function MediaThumbnail({ media }: { media: MediaFile }) {
   const handleReady = useCallback(() => setLoadedUrl(media.url), [media.url]);
 
   return (
-    <div className="relative aspect-[4/3] overflow-hidden bg-slate-900">
+    <div className="relative aspect-[4/3] overflow-hidden bg-stone-900">
       <div
-        className={`absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 transition-opacity duration-500 ${
-          isLoaded ? 'opacity-0' : 'opacity-100'
-        }`}
+        className={`absolute inset-0 bg-gradient-to-br from-stone-800 via-stone-900 to-stone-950 transition-opacity duration-500 ${isLoaded ? 'opacity-0' : 'opacity-100'
+          }`}
       />
       {media.type === 'image' ? (
         <Image
@@ -106,9 +105,8 @@ export function MediaThumbnail({ media }: { media: MediaFile }) {
           alt={media.key}
           fill
           sizes="(min-width: 1024px) 25vw, 50vw"
-          className={`object-cover transition-[opacity,filter,transform] duration-500 ${
-            isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-80 blur-xl scale-105'
-          }`}
+          className={`object-cover transition-[opacity,filter,transform] duration-500 ${isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-80 blur-xl scale-105'
+            }`}
           placeholder="blur"
           blurDataURL={BLUR_PLACEHOLDER}
           onLoadingComplete={handleReady}

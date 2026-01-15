@@ -159,16 +159,19 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
   const filterLabel = filterVisible ? (filter === 'all' ? '全部' : filter === 'image' ? '僅圖片' : '僅影片') : '全部';
 
   return (
-    <section className="relative space-y-5">
+    <section className="relative space-y-6">
       <MessageToast message={message} tone={messageTone} />
 
       {/* 控制面板：顯示標題與管理員登入區塊 */}
-      <div className="glass-card rounded-3xl border border-slate-800/80 bg-slate-900/80 p-6 shadow-2xl ring-1 ring-white/10 sm:p-8">
+      <div className="glass-card rounded-3xl border border-stone-700/50 bg-stone-900/80 p-6 shadow-xl ring-1 ring-white/5 sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-emerald-300">家庭相簿 · R2 即時同步</p>
+            <div className="inline-flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+              <p className="text-sm font-semibold text-amber-400">R2 即時同步</p>
+            </div>
             <h2 className="text-2xl font-bold text-white">媒體控制台</h2>
-            <p className="text-sm leading-relaxed text-slate-300">
+            <p className="text-sm leading-relaxed text-stone-400">
               快速檢視路徑、啟用安全管理密碼，並在需要時開啟管理模式處理上傳與編輯。
             </p>
           </div>
@@ -215,7 +218,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
       {/* 拖曳區：拖曳檔案到上一層 */}
       {isAdmin && isDraggingMedia && parentPrefix !== null && (
         <div
-          className="flex items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-emerald-400/70 bg-emerald-500/10 px-4 py-3 text-emerald-50"
+          className="flex items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-amber-400/60 bg-amber-500/10 px-4 py-3 text-amber-50"
           onDragOver={(event) => {
             event.preventDefault();
             event.dataTransfer.dropEffect = 'move';
@@ -231,7 +234,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             <span className="text-lg">⬆️</span>
             <span>放到上一層</span>
           </div>
-          <p className="text-xs text-emerald-100/80">將拖曳中的媒體移動到「{parentPrefix || '根目錄'}」</p>
+          <p className="text-xs text-amber-100/80">將拖曳中的媒體移動到「{parentPrefix || '根目錄'}」</p>
         </div>
       )}
 

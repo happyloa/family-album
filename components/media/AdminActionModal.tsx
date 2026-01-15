@@ -181,30 +181,30 @@ export function AdminActionModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex min-h-screen w-screen items-center justify-center bg-slate-950/80 p-4 backdrop-blur"
+      className="fixed inset-0 z-50 flex min-h-screen w-screen items-center justify-center bg-stone-950/90 p-4 backdrop-blur-md"
       onClick={onCancel}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="w-[min(560px,92vw)] overflow-hidden rounded-3xl border border-slate-700 bg-slate-900/95 shadow-2xl"
+        className="w-[min(560px,92vw)] overflow-hidden rounded-3xl border border-stone-700/50 bg-stone-900/95 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="border-b border-slate-800 px-5 py-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">管理操作</p>
+        <div className="border-b border-stone-800 px-5 py-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.15em] text-amber-400">管理操作</p>
           <h3 className="mt-2 text-lg font-semibold text-white">{ACTION_TITLE[action]}</h3>
-          <p className="mt-1 text-sm text-slate-400">對象：{currentName || target.key}</p>
+          <p className="mt-1 text-sm text-stone-400">對象：{currentName || target.key}</p>
         </div>
 
         <form className="space-y-4 px-5 py-4" onSubmit={handleSubmit}>
           {action === 'rename' && (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-200" htmlFor="rename-input">
+              <label className="text-sm font-medium text-stone-200" htmlFor="rename-input">
                 新名稱
               </label>
               <input
                 id="rename-input"
-                className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400"
+                className="w-full rounded-2xl border border-stone-700 bg-stone-900/80 px-4 py-3 text-sm text-stone-100 outline-none transition-all duration-200 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/30"
                 inputMode="text"
                 autoComplete="off"
                 autoCapitalize="none"
@@ -214,34 +214,34 @@ export function AdminActionModal({
                 placeholder="輸入新的檔案或資料夾名稱（支援表情符號）"
               />
               {finalName && (
-                <p className="text-xs text-slate-400">完成後名稱：{finalName}</p>
+                <p className="text-xs text-stone-500">完成後名稱：{finalName}</p>
               )}
             </div>
           )}
 
           {action === 'move' && (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-200" htmlFor="move-input">
+              <label className="text-sm font-medium text-stone-200" htmlFor="move-input">
                 目標路徑
               </label>
               <input
                 id="move-input"
-                className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400"
+                className="w-full rounded-2xl border border-stone-700 bg-stone-900/80 px-4 py-3 text-sm text-stone-100 outline-none transition-all duration-200 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/30"
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
                 placeholder="例如 albums/2024"
               />
-              <p className="text-xs text-slate-400">整理後路徑：{sanitizedPath || '根目錄'}</p>
+              <p className="text-xs text-stone-500">整理後路徑：{sanitizedPath || '根目錄'}</p>
             </div>
           )}
 
           {action === 'delete' && (
-            <div className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+            <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               確認刪除{target.isFolder ? '資料夾及其內容' : '此檔案'}？此操作無法復原。
             </div>
           )}
 
-          <ul className="space-y-1 rounded-2xl border border-slate-800 bg-slate-950/40 px-4 py-3 text-xs text-slate-400">
+          <ul className="space-y-1 rounded-2xl border border-stone-700/50 bg-stone-950/40 px-4 py-3 text-xs text-stone-500">
             {action === 'rename' && (
               <>
                 <li>會自動移除特殊字元：&lt;&gt;:&quot;/\\|?*</li>
@@ -258,13 +258,13 @@ export function AdminActionModal({
             {action === 'delete' && <li>刪除後需要重新上傳才能還原</li>}
           </ul>
 
-          {errorMessage && <p className="text-sm text-rose-300">{errorMessage}</p>}
-          {!errorMessage && helperMessage && <p className="text-sm text-emerald-200">{helperMessage}</p>}
+          {errorMessage && <p className="text-sm text-red-300">{errorMessage}</p>}
+          {!errorMessage && helperMessage && <p className="text-sm text-amber-300">{helperMessage}</p>}
 
           {isSubmitting && (
-            <div className="flex items-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            <div className="flex items-center gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
               <span
-                className="h-4 w-4 animate-spin rounded-full border-2 border-amber-200/70 border-t-transparent"
+                className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300/70 border-t-transparent"
                 aria-hidden="true"
               />
               <span>
@@ -275,9 +275,9 @@ export function AdminActionModal({
             </div>
           )}
 
-          <div className="flex flex-col gap-3 border-t border-slate-800 pt-4 sm:flex-row sm:justify-end">
+          <div className="flex flex-col gap-3 border-t border-stone-800 pt-4 sm:flex-row sm:justify-end">
             <button
-              className="rounded-full border border-slate-700 px-5 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+              className="rounded-full border border-stone-700 px-5 py-2 text-sm font-semibold text-stone-200 transition-all duration-200 hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
               type="button"
               onClick={onCancel}
               disabled={isSubmitting}
@@ -285,14 +285,14 @@ export function AdminActionModal({
               取消
             </button>
             <button
-              className="rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 px-5 py-2 text-sm font-semibold text-slate-950 shadow-glow transition hover:from-emerald-300 hover:to-cyan-300 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+              className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2 text-sm font-semibold text-stone-950 shadow-glow transition-all duration-200 hover:from-amber-400 hover:to-orange-400 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
               type="submit"
               disabled={confirmDisabled}
             >
               <span className="flex items-center justify-center gap-2">
                 {isSubmitting && (
                   <span
-                    className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-100/70 border-t-transparent"
+                    className="h-4 w-4 animate-spin rounded-full border-2 border-amber-100/70 border-t-transparent"
                     aria-hidden="true"
                   />
                 )}

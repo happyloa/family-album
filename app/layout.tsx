@@ -35,18 +35,23 @@ export const metadata: Metadata = {
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-Hant" className={`bg-slate-950 ${notoSans.className}`}>
-      <body className="min-h-screen bg-gradient-to-b from-slate-950/90 via-slate-950 to-slate-900 text-slate-100 antialiased">
-        {/* 背景裝飾效果：使用 radial-gradient 製作光暈 */}
-        <div className="pointer-events-none fixed inset-0 -z-10 select-none opacity-80 mix-blend-screen" aria-hidden>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.08),transparent_25%),radial-gradient(circle_at_80%_0,rgba(129,140,248,0.08),transparent_20%),radial-gradient(circle_at_60%_70%,rgba(16,185,129,0.1),transparent_30%)]" />
+    <html lang="zh-Hant" className={`bg-stone-950 ${notoSans.className}`}>
+      <body className="min-h-screen bg-gradient-to-b from-stone-950 via-stone-950/95 to-stone-900 text-stone-100 antialiased">
+        {/* 背景裝飾效果：溫暖的琥珀光暈 */}
+        <div className="pointer-events-none fixed inset-0 -z-10 select-none overflow-hidden" aria-hidden>
+          {/* 主光暈 */}
+          <div className="absolute -left-[20%] -top-[30%] h-[60%] w-[60%] rounded-full bg-amber-500/[0.03] blur-[120px]" />
+          <div className="absolute -right-[10%] top-[10%] h-[40%] w-[40%] rounded-full bg-orange-500/[0.04] blur-[100px]" />
+          <div className="absolute bottom-[10%] left-[30%] h-[35%] w-[35%] rounded-full bg-amber-600/[0.03] blur-[80px]" />
+          {/* 細緻光點裝飾 */}
+          <div className="absolute right-[20%] top-[40%] h-2 w-2 rounded-full bg-amber-400/20 blur-sm" />
+          <div className="absolute left-[15%] top-[60%] h-1.5 w-1.5 rounded-full bg-orange-300/15 blur-sm" />
         </div>
         {/* 主要內容區域（包含 Error Boundary 保護） */}
-        <main className="mx-auto max-w-7xl px-4 pb-14 pt-8 sm:px-8 lg:px-12">
+        <main className="mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-8 lg:px-12">
           <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </body>
     </html>
   );
 }
-
