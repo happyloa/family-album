@@ -61,8 +61,8 @@ export function BreadcrumbNav({
                   )}
                   <button
                     className={`rounded-md px-2 py-1 transition-all duration-150 cursor-pointer ${isLast
-                        ? 'font-semibold text-primary-300'
-                        : 'text-surface-400 hover:text-primary-300 hover:bg-surface-800/50'
+                      ? 'font-semibold text-primary-300'
+                      : 'text-surface-400 hover:text-primary-300 hover:bg-surface-800/50'
                       }`}
                     onClick={() => onNavigate(crumb.key)}
                     type="button"
