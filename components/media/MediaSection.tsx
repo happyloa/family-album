@@ -77,16 +77,16 @@ export function MediaSection({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <h3 className="text-xl font-bold text-white">媒體檔案</h3>
-          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300 ring-1 ring-amber-500/20">
+          <span className="rounded-full bg-primary-500/10 px-3 py-1 text-xs font-semibold text-primary-300 ring-1 ring-primary-500/20">
             {filterLabel}（共 {files.length}）
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {searchEnabled && (
-            <label className="flex items-center gap-2 rounded-xl border border-stone-700/50 bg-stone-800/50 px-3 py-2 text-xs font-semibold text-stone-200">
-              <span className="text-stone-500">搜尋</span>
+            <label className="flex items-center gap-2 rounded-xl border border-surface-700/50 bg-surface-800/50 px-3 py-2 text-xs font-semibold text-surface-200">
+              <span className="text-surface-500">搜尋</span>
               <input
-                className="w-40 rounded-lg border border-stone-700 bg-stone-900/80 px-3 py-2 text-xs font-medium text-white shadow-inner outline-none transition-all duration-200 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/30"
+                className="w-40 rounded-lg border border-surface-700 bg-surface-900/80 px-3 py-2 text-xs font-medium text-white shadow-inner outline-none transition-all duration-200 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/30"
                 type="search"
                 value={searchQuery}
                 onChange={(event) => onSearchChange(event.target.value)}
@@ -96,13 +96,13 @@ export function MediaSection({
             </label>
           )}
           {filterVisible && (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-stone-700/50 bg-stone-800/50 px-3 py-2 text-xs font-semibold text-stone-200">
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-700/50 bg-surface-800/50 px-3 py-2 text-xs font-semibold text-surface-200">
               {filters.map(({ key, label }) => (
                 <button
                   key={key}
                   className={`rounded-lg border px-3 py-1.5 transition-all duration-200 cursor-pointer ${filter === key
-                      ? 'border-amber-500/50 bg-amber-500/15 text-amber-100 shadow-glow'
-                      : 'border-stone-700 bg-stone-800 text-stone-100 hover:border-amber-500/40 hover:text-amber-100'
+                    ? 'border-primary-500/50 bg-primary-500/15 text-primary-100 shadow-glow'
+                    : 'border-surface-700 bg-surface-800 text-surface-100 hover:border-primary-500/40 hover:text-primary-100'
                     }`}
                   type="button"
                   onClick={() => onFilterChange(key)}
@@ -115,7 +115,7 @@ export function MediaSection({
         </div>
       </div>
       {files.length === 0 && (
-        <div className="rounded-2xl border border-stone-700/50 bg-stone-800/50 px-4 py-3 text-sm text-stone-100">
+        <div className="rounded-2xl border border-surface-700/50 bg-surface-800/50 px-4 py-3 text-sm text-surface-100">
           {searchQuery.trim()
             ? `沒有找到包含「${searchQuery.trim()}」的媒體，請換個關鍵字或清除搜尋。`
             : filterVisible && filter !== 'all'
@@ -127,7 +127,7 @@ export function MediaSection({
         {paginatedFiles.map((item) => (
           <article
             key={item.key}
-            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-stone-700/50 bg-stone-800/50 shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-amber-500/40 hover:shadow-xl"
+            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-surface-700/50 bg-surface-800/50 shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-primary-500/40 hover:shadow-xl"
             onClick={(event) => onSelect(item, event.currentTarget)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
@@ -151,19 +151,19 @@ export function MediaSection({
             aria-label={`${item.key.split('/').pop()} 預覽`}
           >
             <MediaThumbnail media={item} />
-            <div className="flex flex-col gap-2 p-4 text-sm text-stone-100">
+            <div className="flex flex-col gap-2 p-4 text-sm text-surface-100">
               <div className="space-y-1">
                 <p className="truncate text-sm font-semibold text-white" title={item.key}>
                   {item.key.split('/').pop()}
                 </p>
                 {item.lastModified && (
-                  <p className="text-xs text-stone-500">更新：{formatTimestamp(item.lastModified)}</p>
+                  <p className="text-xs text-surface-500">更新：{formatTimestamp(item.lastModified)}</p>
                 )}
               </div>
               {isAdmin && (
                 <div className="flex flex-wrap items-center gap-2">
                   <button
-                    className="rounded-full bg-stone-700/50 px-3 py-1 text-xs font-semibold text-stone-200 transition-all duration-200 hover:bg-stone-700 hover:text-white cursor-pointer"
+                    className="rounded-full bg-surface-700/50 px-3 py-1 text-xs font-semibold text-surface-200 transition-all duration-200 hover:bg-surface-700 hover:text-white cursor-pointer"
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -189,20 +189,20 @@ export function MediaSection({
         ))}
       </div>
       {files.length > itemsPerPage && (
-        <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-stone-700/50 bg-stone-800/50 px-4 py-3 text-sm text-stone-100">
+        <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-surface-700/50 bg-surface-800/50 px-4 py-3 text-sm text-surface-100">
           <button
-            className="rounded-lg border border-stone-700 px-3 py-1.5 font-semibold transition-all duration-200 hover:border-amber-500/50 hover:text-amber-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-surface-700 px-3 py-1.5 font-semibold transition-all duration-200 hover:border-primary-500/50 hover:text-primary-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
           >
             ← 上一頁
           </button>
-          <span className="rounded-lg bg-stone-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-stone-400">
+          <span className="rounded-lg bg-surface-800 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-surface-400">
             第 {currentPage} / {totalPages} 頁
           </span>
           <button
-            className="rounded-lg border border-stone-700 px-3 py-1.5 font-semibold transition-all duration-200 hover:border-amber-500/50 hover:text-amber-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-surface-700 px-3 py-1.5 font-semibold transition-all duration-200 hover:border-primary-500/50 hover:text-primary-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
@@ -214,3 +214,4 @@ export function MediaSection({
     </div>
   );
 }
+

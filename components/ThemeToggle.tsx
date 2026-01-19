@@ -20,7 +20,7 @@ export function ThemeToggle() {
             aria-label={isWarm ? '切換為冷色調' : '切換為暖色調'}
             title={isWarm ? '切換為冷色調' : '切換為暖色調'}
         >
-            <span className="transition-transform duration-300" style={{ transform: isWarm ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+            <span>
                 {isWarm ? '🌅' : '🌊'}
             </span>
         </button>
