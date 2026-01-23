@@ -1,9 +1,42 @@
-import nextConfig from "eslint-config-next";
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
+import reactPlugin from "eslint-plugin-react";
+import reactHooksPlugin from "eslint-plugin-react-hooks";
+import nextPlugin from "@next/eslint-plugin-next";
+import importPlugin from "eslint-plugin-import";
 
-export default [
-  ...nextConfig,
+export default tseslint.config(
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
+    files: ["**/*.{ts,tsx,js,jsx,mjs}"],
+    plugins: {
+      react: reactPlugin,
+      "react-hooks": reactHooksPlugin,
+      "@next/next": nextPlugin,
+      import: importPlugin,
+    },
+    languageOptions: {
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+    settings: {
+      react: {
+        version: "detect",
+      },
+    },
     rules: {
+      // Next.js 規則
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
+
+      // React Hooks 規則
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
+
       // TypeScript 嚴格規則
       "@typescript-eslint/no-unused-vars": [
         "error",
@@ -49,4 +82,4 @@ export default [
   {
     ignores: ["node_modules/**", ".next/**", "out/**", "coverage/**"],
   },
-];
+);
