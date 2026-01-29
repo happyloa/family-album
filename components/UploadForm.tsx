@@ -269,35 +269,35 @@ export function UploadForm({
 
   return (
     <form
-      className="flex h-full flex-col gap-4 rounded-2xl border border-stone-700/50 bg-stone-800/50 p-5 shadow-lg"
+      className="flex h-full flex-col gap-4 rounded-2xl border border-slate-700/50 bg-slate-800/50 p-5 shadow-lg"
       onSubmit={handleSubmit}
     >
       <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-amber-400">上傳家庭回憶</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-cyan-400">上傳家庭回憶</p>
         <h3 className="text-lg font-semibold text-white">照片、影片直接存到 Cloudflare R2</h3>
-        <p className="text-sm text-stone-400">支援圖片與影片，上傳前會自動壓縮以節省流量，完成後清單會自動刷新。</p>
+        <p className="text-sm text-slate-400">支援圖片與影片，上傳前會自動壓縮以節省流量，完成後清單會自動刷新。</p>
       </div>
-      <div className="flex flex-col gap-2 rounded-xl border border-stone-700/50 bg-stone-900/60 p-4">
-        <div className="flex items-center justify-between text-xs font-semibold text-amber-300">
+      <div className="flex flex-col gap-2 rounded-xl border border-slate-700/50 bg-slate-900/60 p-4">
+        <div className="flex items-center justify-between text-xs font-semibold text-cyan-300">
           <span>目前貯體用量</span>
-          <span className={overLimit ? 'text-red-300' : 'text-amber-200'}>{usageLabel}</span>
+          <span className={overLimit ? 'text-red-300' : 'text-cyan-200'}>{usageLabel}</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-stone-800">
+        <div className="h-2 overflow-hidden rounded-full bg-slate-800">
           <div
-            className={`h-full rounded-full transition-all duration-300 ${overLimit ? 'bg-gradient-to-r from-red-500 to-orange-500' : 'bg-gradient-to-r from-amber-500 to-orange-500'
+            className={`h-full rounded-full transition-all duration-300 ${overLimit ? 'bg-gradient-to-r from-red-500 to-teal-500' : 'bg-gradient-to-r from-cyan-500 to-teal-500'
               }`}
             style={{ width: `${usagePercent}%` }}
           />
         </div>
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-slate-500">
           已含所有資料夾中的媒體總大小；若超過 10GB，請先清理空間後再上傳。
         </p>
         {usageError && <p className="text-xs font-semibold text-red-300">{usageError}</p>}
       </div>
-      <label className="flex flex-col gap-2 rounded-xl border border-dashed border-stone-700 bg-stone-900/60 p-4 text-sm text-stone-300">
-        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-stone-500">選擇檔案</span>
+      <label className="flex flex-col gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
+        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">選擇檔案</span>
         <input
-          className="w-full text-sm text-stone-100 file:mr-4 file:rounded-lg file:border-0 file:bg-amber-500/15 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-amber-300 file:cursor-pointer hover:file:bg-amber-500/25"
+          className="w-full text-sm text-slate-100 file:mr-4 file:rounded-lg file:border-0 file:bg-cyan-500/15 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-cyan-300 file:cursor-pointer hover:file:bg-cyan-500/25"
           type="file"
           accept="image/*,video/*"
           multiple
@@ -332,11 +332,11 @@ export function UploadForm({
             setFiles(valid);
           }}
         />
-        <p className="text-xs text-stone-500">圖片上限 {imageSizeLabel}，影片上限 {videoSizeLabel}（依設定值）。</p>
+        <p className="text-xs text-slate-500">圖片上限 {imageSizeLabel}，影片上限 {videoSizeLabel}（依設定值）。</p>
         {files.length > 0 && (
-          <div className="space-y-1 text-amber-300">
+          <div className="space-y-1 text-cyan-300">
             <p className="font-semibold">已選擇 {files.length} 個檔案：</p>
-            <ul className="list-disc space-y-1 pl-4 text-amber-200">
+            <ul className="list-disc space-y-1 pl-4 text-cyan-200">
               {files.map((file) => (
                 <li key={file.name}>{file.name}</li>
               ))}
@@ -345,9 +345,9 @@ export function UploadForm({
         )}
       </label>
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-stone-500">目標資料夾（預設根目錄）</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">目標資料夾（預設根目錄）</p>
         <input
-          className="w-full rounded-xl border border-stone-700 bg-stone-900/80 px-4 py-3 text-sm text-stone-100 placeholder:text-stone-500 transition-all duration-200 focus:border-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+          className="w-full rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 transition-all duration-200 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
           type="text"
           value={path}
           placeholder="例如：travel/2024"
@@ -356,21 +356,21 @@ export function UploadForm({
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button
-          className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-3 text-sm font-semibold text-stone-950 shadow-glow transition-all duration-200 hover:from-amber-400 hover:to-orange-400 disabled:cursor-not-allowed disabled:opacity-70"
+          className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 px-4 py-3 text-sm font-semibold text-slate-950 shadow-glow transition-all duration-200 hover:from-cyan-400 hover:to-teal-400 disabled:cursor-not-allowed disabled:opacity-70"
           type="submit"
           disabled={!files.length || loading}
         >
           {loading ? '處理中...' : '上傳檔案'}
         </button>
         {(loading || progress > 0) && (
-          <div className="flex w-full flex-col gap-2 rounded-xl border border-stone-700/50 bg-stone-900/50 p-3">
-            <div className="flex items-center justify-between text-xs font-semibold text-amber-300">
+          <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-700/50 bg-slate-900/50 p-3">
+            <div className="flex items-center justify-between text-xs font-semibold text-cyan-300">
               <span>上傳進度</span>
               <span>{progress}%</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-stone-800">
+            <div className="h-2 overflow-hidden rounded-full bg-slate-800">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-[width] duration-200"
+                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-teal-500 transition-[width] duration-200"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -382,7 +382,7 @@ export function UploadForm({
                 ? 'text-green-300'
                 : statusTone === 'error'
                   ? 'text-red-300'
-                  : 'text-amber-300'
+                  : 'text-cyan-300'
               }`}
             aria-live="polite"
           >

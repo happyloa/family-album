@@ -149,7 +149,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-primary-500 shadow-[0_0_8px_var(--theme-glow-color)]" />
+              <div className="h-2 w-2 rounded-full bg-primary-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
               <p className="text-sm font-semibold text-primary-400">R2 即時同步</p>
             </div>
             <h2 className="text-2xl font-bold text-white">媒體控制台</h2>

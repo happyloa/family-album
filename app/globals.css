@@ -2,33 +2,34 @@
 
 /* Tailwind CSS 4 - CSS-based 主題配置 */
 @theme {
-  /* 語意化顏色變數 - 將被主題覆寫 */
-  --color-primary-50: var(--theme-primary-50);
-  --color-primary-100: var(--theme-primary-100);
-  --color-primary-200: var(--theme-primary-200);
-  --color-primary-300: var(--theme-primary-300);
-  --color-primary-400: var(--theme-primary-400);
-  --color-primary-500: var(--theme-primary-500);
-  --color-primary-600: var(--theme-primary-600);
-  --color-primary-700: var(--theme-primary-700);
+  /* 語意化顏色變數 - 青藍色主色調 (Cyan) */
+  --color-primary-50: #ecfeff;
+  --color-primary-100: #cffafe;
+  --color-primary-200: #a5f3fc;
+  --color-primary-300: #67e8f9;
+  --color-primary-400: #22d3ee;
+  --color-primary-500: #06b6d4;
+  --color-primary-600: #0891b2;
+  --color-primary-700: #0e7490;
 
-  --color-surface-50: var(--theme-surface-50);
-  --color-surface-100: var(--theme-surface-100);
-  --color-surface-200: var(--theme-surface-200);
-  --color-surface-300: var(--theme-surface-300);
-  --color-surface-400: var(--theme-surface-400);
-  --color-surface-500: var(--theme-surface-500);
-  --color-surface-600: var(--theme-surface-600);
-  --color-surface-700: var(--theme-surface-700);
-  --color-surface-800: var(--theme-surface-800);
-  --color-surface-900: var(--theme-surface-900);
-  --color-surface-950: var(--theme-surface-950);
+  /* 表面顏色 - 深藍灰 (Slate) */
+  --color-surface-50: #f8fafc;
+  --color-surface-100: #f1f5f9;
+  --color-surface-200: #e2e8f0;
+  --color-surface-300: #cbd5e1;
+  --color-surface-400: #94a3b8;
+  --color-surface-500: #64748b;
+  --color-surface-600: #475569;
+  --color-surface-700: #334155;
+  --color-surface-800: #1e293b;
+  --color-surface-900: #0f172a;
+  --color-surface-950: #020617;
 
-  /* 自訂陰影 */
-  --shadow-glow: 0 8px 32px var(--theme-glow-color),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
-  --shadow-glow-lg: 0 12px 48px var(--theme-glow-color-lg),
-    0 0 0 1px var(--theme-glow-ring);
+  /* 自訂陰影 - 青色光暈 */
+  --shadow-glow:
+    0 8px 32px rgba(6, 182, 212, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --shadow-glow-lg:
+    0 12px 48px rgba(6, 182, 212, 0.25), 0 0 0 1px rgba(6, 182, 212, 0.1);
 
   /* 自訂動畫 */
   --animate-fade-in: fade-in 0.3s ease-out;
@@ -55,97 +56,27 @@
   }
 }
 
-/* ===== 暖色調主題 (預設) ===== */
-:root,
-[data-theme="warm"] {
+:root {
   color-scheme: dark;
-
-  /* Primary: Amber/Orange */
-  --theme-primary-50: #fffbeb;
-  --theme-primary-100: #fef3c7;
-  --theme-primary-200: #fde68a;
-  --theme-primary-300: #fcd34d;
-  --theme-primary-400: #fbbf24;
-  --theme-primary-500: #f59e0b;
-  --theme-primary-600: #d97706;
-  --theme-primary-700: #b45309;
-
-  /* Surface: Stone */
-  --theme-surface-50: #fafaf9;
-  --theme-surface-100: #f5f5f4;
-  --theme-surface-200: #e7e5e4;
-  --theme-surface-300: #d6d3d1;
-  --theme-surface-400: #a8a29e;
-  --theme-surface-500: #78716c;
-  --theme-surface-600: #57534e;
-  --theme-surface-700: #44403c;
-  --theme-surface-800: #292524;
-  --theme-surface-900: #1c1917;
-  --theme-surface-950: #0c0a09;
-
-  /* Glow effects */
-  --theme-glow-color: rgba(251, 191, 36, 0.2);
-  --theme-glow-color-lg: rgba(251, 191, 36, 0.25);
-  --theme-glow-ring: rgba(251, 191, 36, 0.1);
-
-  /* Background gradients */
-  --theme-bg-primary: #0a0908;
-  --theme-gradient-from: #f59e0b;
-  --theme-gradient-to: #ea580c;
-}
-
-/* ===== 冷色調主題 ===== */
-[data-theme="cool"] {
-  /* Primary: Emerald/Cyan */
-  --theme-primary-50: #ecfdf5;
-  --theme-primary-100: #d1fae5;
-  --theme-primary-200: #a7f3d0;
-  --theme-primary-300: #6ee7b7;
-  --theme-primary-400: #34d399;
-  --theme-primary-500: #10b981;
-  --theme-primary-600: #059669;
-  --theme-primary-700: #047857;
-
-  /* Surface: Slate */
-  --theme-surface-50: #f8fafc;
-  --theme-surface-100: #f1f5f9;
-  --theme-surface-200: #e2e8f0;
-  --theme-surface-300: #cbd5e1;
-  --theme-surface-400: #94a3b8;
-  --theme-surface-500: #64748b;
-  --theme-surface-600: #475569;
-  --theme-surface-700: #334155;
-  --theme-surface-800: #1e293b;
-  --theme-surface-900: #0f172a;
-  --theme-surface-950: #020617;
-
-  /* Glow effects */
-  --theme-glow-color: rgba(16, 185, 129, 0.25);
-  --theme-glow-color-lg: rgba(56, 189, 248, 0.2);
-  --theme-glow-ring: rgba(56, 189, 248, 0.1);
-
-  /* Background gradients */
-  --theme-bg-primary: #010817;
-  --theme-gradient-from: #34d399;
-  --theme-gradient-to: #22d3ee;
 }
 
 body {
   margin: 0;
-  background-color: var(--theme-bg-primary);
-  background-image: radial-gradient(
+  background-color: #020617;
+  background-image:
+    radial-gradient(
       ellipse at 0% 0%,
-      color-mix(in srgb, var(--theme-primary-400) 6%, transparent) 0,
+      color-mix(in srgb, #22d3ee 6%, transparent) 0,
       transparent 50%
     ),
     radial-gradient(
       ellipse at 100% 0%,
-      color-mix(in srgb, var(--theme-primary-500) 4%, transparent) 0,
+      color-mix(in srgb, #06b6d4 4%, transparent) 0,
       transparent 40%
     ),
     radial-gradient(
       ellipse at 50% 100%,
-      color-mix(in srgb, var(--theme-primary-700) 5%, transparent) 0,
+      color-mix(in srgb, #0e7490 5%, transparent) 0,
       transparent 50%
     );
 }
@@ -155,14 +86,14 @@ body {
   backdrop-filter: blur(12px) saturate(1.2);
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--theme-surface-800) 95%, transparent) 0%,
-    color-mix(in srgb, var(--theme-surface-900) 88%, transparent) 50%,
-    color-mix(in srgb, var(--theme-surface-800) 92%, transparent) 100%
+    color-mix(in srgb, #1e293b 95%, transparent) 0%,
+    color-mix(in srgb, #0f172a 88%, transparent) 50%,
+    color-mix(in srgb, #1e293b 92%, transparent) 100%
   );
-  border: 1px solid
-    color-mix(in srgb, var(--theme-primary-500) 15%, transparent);
-  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.5),
-    0 0 0 1px color-mix(in srgb, var(--theme-primary-400) 8%, transparent),
+  border: 1px solid color-mix(in srgb, #06b6d4 15%, transparent);
+  box-shadow:
+    0 24px 64px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px color-mix(in srgb, #22d3ee 8%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
@@ -173,40 +104,22 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--theme-surface-900);
+  background: #0f172a;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    var(--theme-primary-600) 0%,
-    var(--theme-primary-700) 100%
-  );
+  background: linear-gradient(180deg, #0891b2 0%, #0e7490 100%);
   border-radius: 4px;
-  border: 2px solid var(--theme-surface-900);
+  border: 2px solid #0f172a;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    180deg,
-    var(--theme-primary-500) 0%,
-    var(--theme-primary-600) 100%
-  );
+  background: linear-gradient(180deg, #06b6d4 0%, #0891b2 100%);
 }
 
 /* 選取文字顏色 */
 ::selection {
-  background: color-mix(in srgb, var(--theme-primary-400) 30%, transparent);
-  color: var(--theme-primary-100);
-}
-
-/* 主題切換過渡效果 */
-html {
-  transition: background-color 0.3s ease;
-}
-
-body,
-.glass-card {
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  background: color-mix(in srgb, #22d3ee 30%, transparent);
+  color: #cffafe;
 }
