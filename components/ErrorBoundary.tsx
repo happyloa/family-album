@@ -48,14 +48,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                         <p className="text-sm text-slate-300">
                             應用程式遇到了意外問題。請嘗試重新整理頁面，或稍後再試。
                         </p>
-                        {this.state.error && (
-                            <details className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-3 text-left text-xs text-slate-400">
+                        {this.state.error ? <details className="mt-4 rounded-xl border border-slate-700 bg-slate-950/60 p-3 text-left text-xs text-slate-400">
                                 <summary className="cursor-pointer font-semibold text-slate-300">技術細節</summary>
                                 <pre className="mt-2 overflow-auto whitespace-pre-wrap break-all">
                                     {this.state.error.message}
                                 </pre>
-                            </details>
-                        )}
+                            </details> : null}
                         <div className="flex justify-center gap-3 pt-2">
                             <button
                                 className="rounded-full border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 transition-all duration-200 hover:border-slate-400 cursor-pointer"

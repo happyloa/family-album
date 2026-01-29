@@ -213,9 +213,7 @@ export function AdminActionModal({
                 onChange={(event) => setInputValue(event.target.value)}
                 placeholder="輸入新的檔案或資料夾名稱（支援表情符號）"
               />
-              {finalName && (
-                <p className="text-xs text-slate-500">完成後名稱：{finalName}</p>
-              )}
+              {finalName ? <p className="text-xs text-slate-500">完成後名稱：{finalName}</p> : null}
             </div>
           )}
 
@@ -245,7 +243,7 @@ export function AdminActionModal({
             {action === 'rename' && (
               <>
                 <li>會自動移除特殊字元：&lt;&gt;:&quot;/\\|?*</li>
-                {target.isFolder && <li>資料夾名稱最多 {maxNameLength} 個字</li>}
+                {target.isFolder ? <li>資料夾名稱最多 {maxNameLength} 個字</li> : null}
               </>
             )}
             {action === 'move' && (
@@ -258,11 +256,10 @@ export function AdminActionModal({
             {action === 'delete' && <li>刪除後需要重新上傳才能還原</li>}
           </ul>
 
-          {errorMessage && <p className="text-sm text-red-300">{errorMessage}</p>}
-          {!errorMessage && helperMessage && <p className="text-sm text-cyan-300">{helperMessage}</p>}
+          {errorMessage ? <p className="text-sm text-red-300">{errorMessage}</p> : null}
+          {!errorMessage && helperMessage ? <p className="text-sm text-cyan-300">{helperMessage}</p> : null}
 
-          {isSubmitting && (
-            <div className="flex items-center gap-2 rounded-2xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-200">
+          {isSubmitting ? <div className="flex items-center gap-2 rounded-2xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-200">
               <span
                 className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-300/70 border-t-transparent"
                 aria-hidden="true"
@@ -272,8 +269,7 @@ export function AdminActionModal({
                 {action === 'move' && '正在搬移中，請稍候...'}
                 {action === 'delete' && '正在刪除中...'}
               </span>
-            </div>
-          )}
+            </div> : null}
 
           <div className="flex flex-col gap-3 border-t border-slate-800 pt-4 sm:flex-row sm:justify-end">
             <button
@@ -290,12 +286,10 @@ export function AdminActionModal({
               disabled={confirmDisabled}
             >
               <span className="flex items-center justify-center gap-2">
-                {isSubmitting && (
-                  <span
+                {isSubmitting ? <span
                     className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-100/70 border-t-transparent"
                     aria-hidden="true"
-                  />
-                )}
+                  /> : null}
                 <span>確認</span>
               </span>
             </button>

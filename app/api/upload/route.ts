@@ -1,11 +1,4 @@
 import { NextResponse } from 'next/server';
-import { uploadToR2 } from '@/lib/r2';
-import {
-  ADMIN_RATE_LIMIT_MAX_FAILURES,
-  ADMIN_RATE_LIMIT_WINDOW_MS,
-  AdminRateLimiter,
-  createAdminRateLimiter
-} from '@/lib/admin-rate-limit';
 
 import {
   MAX_FILE_COUNT,
@@ -13,6 +6,15 @@ import {
   MAX_TOTAL_SIZE_MB,
   getSizeLimitByMime
 } from './constants';
+
+import {
+  ADMIN_RATE_LIMIT_MAX_FAILURES,
+  ADMIN_RATE_LIMIT_WINDOW_MS,
+  AdminRateLimiter,
+  createAdminRateLimiter
+} from '@/lib/admin-rate-limit';
+import { uploadToR2 } from '@/lib/r2';
+
 
 // 使用 Edge Runtime 以符合 Cloudflare Pages 的執行環境。
 export const runtime = 'edge';

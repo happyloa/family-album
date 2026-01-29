@@ -50,7 +50,7 @@ export function BucketUsageProgress({
             <p className="text-xs text-slate-400">
                 已含所有資料夾中的媒體總大小；若超過限額，請先清理空間後再上傳。
             </p>
-            {usageError && <p className="text-xs font-semibold text-cyan-200">{usageError}</p>}
+            {usageError ? <p className="text-xs font-semibold text-cyan-200">{usageError}</p> : null}
         </div>
     );
 }

@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import { calculateBucketUsage } from '@/lib/r2';
 import { GET } from './route';
+
+import { calculateBucketUsage } from '@/lib/r2';
 
 vi.mock('@/lib/r2', () => ({
   calculateBucketUsage: vi.fn()

@@ -1,6 +1,7 @@
-import { MAX_FOLDER_DEPTH } from "@/components/media/constants";
 import { AwsClient } from "aws4fetch";
 import { XMLParser } from "fast-xml-parser";
+
+import { MAX_FOLDER_DEPTH } from "@/components/media/constants";
 
 type EnvKeys =
   | "R2_ACCOUNT_ID"
@@ -183,7 +184,7 @@ function ensureArray<T>(value: T | T[] | undefined): T[] {
 function readTextNode(value: unknown): string {
   if (value === undefined || value === null) return "";
   if (typeof value === "string" || typeof value === "number")
-    return String(value);
+    {return String(value);}
   if (
     typeof value === "object" &&
     "value" in (value as Record<string, unknown>)
@@ -270,7 +271,7 @@ function parseListResult(
     .map((item: any) => {
       const key = readTextNode(item.Key);
       if (!key || (!options.includePrefixObject && key === searchPrefix))
-        return null;
+        {return null;}
 
       const sizeText = readTextNode(item.Size);
       const lastModified = readTextNode(item.LastModified) || undefined;

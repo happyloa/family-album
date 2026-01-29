@@ -34,8 +34,7 @@ export function BreadcrumbNav({
         {/* 左側：麵包屑路徑 */}
         <div className="flex items-center gap-3 overflow-x-auto">
           {/* 返回按鈕 - 整合到麵包屑前面 */}
-          {canGoBack && (
-            <button
+          {canGoBack ? <button
               className="flex-shrink-0 rounded-lg border border-surface-600 bg-surface-800/80 p-2 text-surface-300 transition-all duration-200 hover:border-primary-500/50 hover:bg-surface-700 hover:text-primary-200 cursor-pointer"
               onClick={onBack}
               type="button"
@@ -45,8 +44,7 @@ export function BreadcrumbNav({
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
-            </button>
-          )}
+            </button> : null}
 
           {/* 麵包屑路徑 */}
           <ol className="flex items-center gap-1 text-sm" aria-label="Breadcrumb">

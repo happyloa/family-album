@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+
 import {
   MAX_IMAGE_SIZE_MB,
   MAX_VIDEO_SIZE_MB,
@@ -292,7 +293,7 @@ export function UploadForm({
         <p className="text-xs text-slate-500">
           已含所有資料夾中的媒體總大小；若超過 10GB，請先清理空間後再上傳。
         </p>
-        {usageError && <p className="text-xs font-semibold text-red-300">{usageError}</p>}
+        {usageError ? <p className="text-xs font-semibold text-red-300">{usageError}</p> : null}
       </div>
       <label className="flex flex-col gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
         <span className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">選擇檔案</span>
@@ -362,8 +363,7 @@ export function UploadForm({
         >
           {loading ? '處理中...' : '上傳檔案'}
         </button>
-        {(loading || progress > 0) && (
-          <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-700/50 bg-slate-900/50 p-3">
+        {(loading || progress > 0) ? <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-700/50 bg-slate-900/50 p-3">
             <div className="flex items-center justify-between text-xs font-semibold text-cyan-300">
               <span>上傳進度</span>
               <span>{progress}%</span>
@@ -374,10 +374,8 @@ export function UploadForm({
                 style={{ width: `${progress}%` }}
               />
             </div>
-          </div>
-        )}
-        {status && (
-          <p
+          </div> : null}
+        {status ? <p
             className={`text-sm font-semibold ${statusTone === 'success'
                 ? 'text-green-300'
                 : statusTone === 'error'
@@ -387,8 +385,7 @@ export function UploadForm({
             aria-live="polite"
           >
             {status}
-          </p>
-        )}
+          </p> : null}
       </div>
     </form>
   );

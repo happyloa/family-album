@@ -1,4 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+import { MAX_FOLDER_DEPTH, MAX_FOLDER_NAME_LENGTH } from '@/components/media/constants';
+import {
+  ADMIN_RATE_LIMIT_MAX_FAILURES,
+  ADMIN_RATE_LIMIT_WINDOW_MS,
+  AdminRateLimiter,
+  createAdminRateLimiter
+} from '@/lib/admin-rate-limit';
 import {
   createFolder,
   deleteFile,
@@ -9,13 +17,6 @@ import {
   renameFile,
   renameFolder
 } from '@/lib/r2';
-import { MAX_FOLDER_DEPTH, MAX_FOLDER_NAME_LENGTH } from '@/components/media/constants';
-import {
-  ADMIN_RATE_LIMIT_MAX_FAILURES,
-  ADMIN_RATE_LIMIT_WINDOW_MS,
-  AdminRateLimiter,
-  createAdminRateLimiter
-} from '@/lib/admin-rate-limit';
 
 // 設定 Edge Runtime 以相容 Cloudflare Pages 部署
 export const runtime = 'edge';

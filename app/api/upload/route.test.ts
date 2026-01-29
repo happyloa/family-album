@@ -1,8 +1,9 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 
+import { POST } from './route';
+
 import { uploadToR2 } from '@/lib/r2';
 
-import { POST } from './route';
 
 vi.mock('@/lib/r2', () => ({
   uploadToR2: vi.fn(async (file: File, prefix: string) => ({

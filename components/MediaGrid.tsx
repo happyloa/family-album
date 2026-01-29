@@ -1,8 +1,7 @@
 'use client';
 
-import { Suspense, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { UploadForm } from './UploadForm';
 import { AdminAccessPanel } from './media/AdminAccessPanel';
 import { AdminActionModal } from './media/AdminActionModal';
 import { BreadcrumbNav } from './media/BreadcrumbNav';
@@ -15,17 +14,18 @@ import {
 import { EmptyState } from './media/EmptyState';
 import { FolderCreator } from './media/FolderCreator';
 import { FolderGrid } from './media/FolderGrid';
-import { MediaPreviewModal } from './media/MediaPreviewModal';
-import { MediaSection } from './media/MediaSection';
-import { MediaSkeleton } from './media/MediaSkeleton';
-import { MessageToast } from './media/MessageToast';
 import { useAdminAuth } from './media/hooks/useAdminAuth';
 import { useMediaActions } from './media/hooks/useMediaActions';
 import { useMediaData } from './media/hooks/useMediaData';
 import { useMediaDragDrop } from './media/hooks/useMediaDragDrop';
 import { useMessage } from './media/hooks/useMessage';
+import { MediaPreviewModal } from './media/MediaPreviewModal';
+import { MediaSection } from './media/MediaSection';
+import { MediaSkeleton } from './media/MediaSkeleton';
+import { MessageToast } from './media/MessageToast';
 import { getDepth, sanitizeName, sanitizePath } from './media/sanitize';
 import { MediaFile } from './media/types';
+import { UploadForm } from './UploadForm';
 
 type Breadcrumb = { label: string; key: string };
 
@@ -170,16 +170,14 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
           />
         </div>
 
-        {isAdmin && (
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <FolderCreator
-              value={newFolderName}
-              onChange={(value) => setNewFolderName(sanitizeName(value))}
-              onSubmit={handleCreateFolder}
-            />
-            <UploadForm adminToken={adminToken} currentPath={currentPrefix} onUploaded={() => loadMedia(currentPrefix)} />
-          </div>
-        )}
+        {isAdmin ? <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <FolderCreator
+            value={newFolderName}
+            onChange={(value) => setNewFolderName(sanitizeName(value))}
+            onSubmit={handleCreateFolder}
+          />
+          <UploadForm adminToken={adminToken} currentPath={currentPrefix} onUploaded={() => loadMedia(currentPrefix)} />
+        </div> : null}
       </div>
 
       <BreadcrumbNav
@@ -195,27 +193,25 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
         depth={depth}
       />
 
-      {isAdmin && isDraggingMedia && parentPrefix !== null && (
-        <div
-          className="flex items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-primary-400/60 bg-primary-500/10 px-4 py-3 text-primary-50"
-          onDragOver={(event) => {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'move';
-          }}
-          onDrop={(event) => {
-            event.preventDefault();
-            void moveDraggedMediaTo(parentPrefix);
-          }}
-          role="button"
-          aria-label="將媒體放到上一層"
-        >
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <span className="text-lg">⬆️</span>
-            <span>放到上一層</span>
-          </div>
-          <p className="text-xs text-primary-100/80">將拖曳中的媒體移動到「{parentPrefix || '根目錄'}」</p>
+      {isAdmin && isDraggingMedia && parentPrefix !== null ? <div
+        className="flex items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-primary-400/60 bg-primary-500/10 px-4 py-3 text-primary-50"
+        onDragOver={(event) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          void moveDraggedMediaTo(parentPrefix);
+        }}
+        role="button"
+        aria-label="將媒體放到上一層"
+      >
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <span className="text-lg">⬆️</span>
+          <span>放到上一層</span>
         </div>
-      )}
+        <p className="text-xs text-primary-100/80">將拖曳中的媒體移動到「{parentPrefix || '根目錄'}」</p>
+      </div> : null}
 
       {loading ? (
         <MediaSkeleton />
@@ -229,7 +225,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             onEnter={handleEnterFolder}
             onRename={(key) => openAdminActionModal('rename', key, true)}
             onDelete={(key) => openAdminActionModal('delete', key, true)}
-            canDropMedia={isAdmin && isDraggingMedia}
+            canDropMedia={isAdmin ? isDraggingMedia : false}
             onDropMedia={(targetKey) => void moveDraggedMediaTo(targetKey)}
           />
 

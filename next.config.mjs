@@ -6,7 +6,7 @@ const customUrl = (() => {
 
   try {
     return new URL(customBase);
-  } catch (error) {
+  } catch (_error) {
     // If parsing fails, skip adding a custom pattern.
     return null;
   }
@@ -16,20 +16,14 @@ const customPattern = (() => {
   if (!customUrl) return null;
 
   const basePath = customUrl.pathname;
-  const pathname = basePath.endsWith('/') ? `${basePath}**` : `${basePath}/**`;
+  const pathname = basePath.endsWith("/") ? `${basePath}**` : `${basePath}/**`;
 
   return {
-    protocol: customUrl.protocol.replace(':', ''),
+    protocol: customUrl.protocol.replace(":", ""),
     hostname: customUrl.hostname,
-    pathname
+    pathname,
   };
 })();
-
-const r2AllowedOrigins = [
-  'https://*.r2.cloudflarestorage.com',
-  'https://*.r2.dev'
-];
-
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -41,22 +35,22 @@ const contentSecurityPolicy = [
   "font-src 'self' data:",
   "connect-src 'self' https:",
   "img-src 'self' data: blob: https:",
-  "media-src 'self' https: data: blob:"
-].join('; ');
+  "media-src 'self' https: data: blob:",
+].join("; ");
 
 const remotePatterns = [
   {
-    protocol: 'https',
-    hostname: '**.r2.cloudflarestorage.com'
+    protocol: "https",
+    hostname: "**.r2.cloudflarestorage.com",
   },
   {
-    protocol: 'https',
-    hostname: '**.r2.dev'
+    protocol: "https",
+    hostname: "**.r2.dev",
   },
   {
-    protocol: 'https',
-    hostname: '**'
-  }
+    protocol: "https",
+    hostname: "**",
+  },
 ];
 
 if (customPattern) {
@@ -65,45 +59,45 @@ if (customPattern) {
 
 const nextConfig = {
   images: {
-    remotePatterns
+    remotePatterns,
   },
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
           {
-            key: 'Content-Security-Policy',
-            value: contentSecurityPolicy
+            key: "Content-Security-Policy",
+            value: contentSecurityPolicy,
           },
           {
-            key: 'Content-Security-Policy-Report-Only',
-            value: contentSecurityPolicy
+            key: "Content-Security-Policy-Report-Only",
+            value: contentSecurityPolicy,
           },
           {
-            key: 'X-Frame-Options',
-            value: 'DENY'
+            key: "X-Frame-Options",
+            value: "DENY",
           },
           {
-            key: 'Referrer-Policy',
-            value: 'no-referrer'
+            key: "Referrer-Policy",
+            value: "no-referrer",
           },
           {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()'
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
           },
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
           {
-            key: 'X-Robots-Tag',
-            value: 'noindex, nofollow, noarchive, nosnippet, noimageindex'
-          }
-        ]
-      }
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+          },
+        ],
+      },
     ];
-  }
+  },
 };
 
 export default nextConfig;

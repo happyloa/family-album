@@ -82,8 +82,7 @@ export function MediaSection({
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {searchEnabled && (
-            <label className="flex items-center gap-2 rounded-xl border border-surface-700/50 bg-surface-800/50 px-3 py-2 text-xs font-semibold text-surface-200">
+          {searchEnabled ? <label className="flex items-center gap-2 rounded-xl border border-surface-700/50 bg-surface-800/50 px-3 py-2 text-xs font-semibold text-surface-200">
               <span className="text-surface-500">搜尋</span>
               <input
                 className="w-40 rounded-lg border border-surface-700 bg-surface-900/80 px-3 py-2 text-xs font-medium text-white shadow-inner outline-none transition-all duration-200 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/30"
@@ -93,10 +92,8 @@ export function MediaSection({
                 placeholder="輸入標題關鍵字"
                 aria-label="搜尋媒體標題"
               />
-            </label>
-          )}
-          {filterVisible && (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-700/50 bg-surface-800/50 px-3 py-2 text-xs font-semibold text-surface-200">
+            </label> : null}
+          {filterVisible ? <div className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-700/50 bg-surface-800/50 px-3 py-2 text-xs font-semibold text-surface-200">
               {filters.map(({ key, label }) => (
                 <button
                   key={key}
@@ -110,8 +107,7 @@ export function MediaSection({
                   {label}
                 </button>
               ))}
-            </div>
-          )}
+            </div> : null}
         </div>
       </div>
       {files.length === 0 && (
@@ -156,12 +152,9 @@ export function MediaSection({
                 <p className="truncate text-sm font-semibold text-white" title={item.key}>
                   {item.key.split('/').pop()}
                 </p>
-                {item.lastModified && (
-                  <p className="text-xs text-surface-500">更新：{formatTimestamp(item.lastModified)}</p>
-                )}
+                {item.lastModified ? <p className="text-xs text-surface-500">更新：{formatTimestamp(item.lastModified)}</p> : null}
               </div>
-              {isAdmin && (
-                <div className="flex flex-wrap items-center gap-2">
+              {isAdmin ? <div className="flex flex-wrap items-center gap-2">
                   <button
                     className="rounded-full bg-surface-700/50 px-3 py-1 text-xs font-semibold text-surface-200 transition-all duration-200 hover:bg-surface-700 hover:text-white cursor-pointer"
                     type="button"
@@ -182,8 +175,7 @@ export function MediaSection({
                   >
                     刪除
                   </button>
-                </div>
-              )}
+                </div> : null}
             </div>
           </article>
         ))}

@@ -71,8 +71,7 @@ export function FolderGrid({
                 <p className="truncate text-xs text-surface-500">{folder.key || '根目錄'}</p>
               </div>
             </div>
-            {isAdmin && (
-              <div className="flex flex-wrap items-center gap-2 text-sm text-surface-300">
+            {isAdmin ? <div className="flex flex-wrap items-center gap-2 text-sm text-surface-300">
                 <button
                   className="rounded-full bg-surface-700/50 px-3 py-1 text-xs font-semibold text-surface-200 transition-all duration-200 hover:bg-surface-700 hover:text-white cursor-pointer"
                   type="button"
@@ -93,8 +92,7 @@ export function FolderGrid({
                 >
                   刪除
                 </button>
-              </div>
-            )}
+              </div> : null}
           </article>
         ))}
       </div>

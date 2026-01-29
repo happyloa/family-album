@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useId, useRef, useState } from 'react';
+
 import { MediaFile } from './types';
 
 export function MediaPreviewModal({
@@ -110,7 +111,7 @@ export function MediaPreviewModal({
             <p className="text-sm font-semibold text-white" id={titleId}>
               {mediaName}
             </p>
-            {media.size && <p className="text-xs text-slate-500">{(media.size / 1024 / 1024).toFixed(2)} MB</p>}
+            {media.size ? <p className="text-xs text-slate-500">{(media.size / 1024 / 1024).toFixed(2)} MB</p> : null}
             <p className="sr-only" id={descriptionId}>
               {media.type === 'image' ? '圖片' : '影片'} 預覽{media.size ? `，大小 ${(media.size / 1024 / 1024).toFixed(2)} MB` : ''}
             </p>
