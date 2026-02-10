@@ -83,31 +83,31 @@ export function MediaSection({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {searchEnabled ? <label className="flex items-center gap-2 rounded-xl border border-surface-700/50 bg-surface-800/50 px-3 py-2 text-xs font-semibold text-surface-200">
-              <span className="text-surface-500">搜尋</span>
-              <input
-                className="w-40 rounded-lg border border-surface-700 bg-surface-900/80 px-3 py-2 text-xs font-medium text-white shadow-inner outline-none transition-all duration-200 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/30"
-                type="search"
-                value={searchQuery}
-                onChange={(event) => onSearchChange(event.target.value)}
-                placeholder="輸入標題關鍵字"
-                aria-label="搜尋媒體標題"
-              />
-            </label> : null}
+            <span className="text-surface-500">搜尋</span>
+            <input
+              className="w-40 rounded-lg border border-surface-700 bg-surface-900/80 px-3 py-2 text-xs font-medium text-white shadow-inner outline-none transition-all duration-200 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/30"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="輸入標題關鍵字"
+              aria-label="搜尋媒體標題"
+            />
+          </label> : null}
           {filterVisible ? <div className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-700/50 bg-surface-800/50 px-3 py-2 text-xs font-semibold text-surface-200">
-              {filters.map(({ key, label }) => (
-                <button
-                  key={key}
-                  className={`rounded-lg border px-3 py-1.5 transition-all duration-200 cursor-pointer ${filter === key
-                    ? 'border-primary-500/50 bg-primary-500/15 text-primary-100 shadow-glow'
-                    : 'border-surface-700 bg-surface-800 text-surface-100 hover:border-primary-500/40 hover:text-primary-100'
-                    }`}
-                  type="button"
-                  onClick={() => onFilterChange(key)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div> : null}
+            {filters.map(({ key, label }) => (
+              <button
+                key={key}
+                className={`rounded-lg border px-3 py-1.5 transition-all duration-200 cursor-pointer ${filter === key
+                  ? 'border-primary-500/50 bg-primary-500/15 text-primary-100 shadow-glow'
+                  : 'border-surface-700 bg-surface-800 text-surface-100 hover:border-primary-500/40 hover:text-primary-100'
+                  }`}
+                type="button"
+                onClick={() => onFilterChange(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div> : null}
         </div>
       </div>
       {files.length === 0 && (
@@ -123,7 +123,7 @@ export function MediaSection({
         {paginatedFiles.map((item) => (
           <article
             key={item.key}
-            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-surface-700/50 bg-surface-800/50 shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-primary-500/40 hover:shadow-xl"
+            className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-surface-700/50 bg-surface-800/50 shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-primary-500/40 hover:shadow-xl active:scale-[0.97]"
             onClick={(event) => onSelect(item, event.currentTarget)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
@@ -155,27 +155,27 @@ export function MediaSection({
                 {item.lastModified ? <p className="text-xs text-surface-500">更新：{formatTimestamp(item.lastModified)}</p> : null}
               </div>
               {isAdmin ? <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    className="rounded-full bg-surface-700/50 px-3 py-1 text-xs font-semibold text-surface-200 transition-all duration-200 hover:bg-surface-700 hover:text-white cursor-pointer"
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onRename(item.key);
-                    }}
-                  >
-                    重新命名
-                  </button>
-                  <button
-                    className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-300 transition-all duration-200 hover:bg-red-500/25 hover:text-red-200 cursor-pointer"
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onDelete(item.key);
-                    }}
-                  >
-                    刪除
-                  </button>
-                </div> : null}
+                <button
+                  className="rounded-full bg-surface-700/50 px-3 py-1 text-xs font-semibold text-surface-200 transition-all duration-200 hover:bg-surface-700 hover:text-white cursor-pointer"
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRename(item.key);
+                  }}
+                >
+                  重新命名
+                </button>
+                <button
+                  className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-300 transition-all duration-200 hover:bg-red-500/25 hover:text-red-200 cursor-pointer"
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDelete(item.key);
+                  }}
+                >
+                  刪除
+                </button>
+              </div> : null}
             </div>
           </article>
         ))}
@@ -183,7 +183,7 @@ export function MediaSection({
       {files.length > itemsPerPage && (
         <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-surface-700/50 bg-surface-800/50 px-4 py-3 text-sm text-surface-100">
           <button
-            className="rounded-lg border border-surface-700 px-3 py-1.5 font-semibold transition-all duration-200 hover:border-primary-500/50 hover:text-primary-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-surface-700 px-3 py-1.5 font-semibold transition-all duration-200 hover:border-primary-500/50 hover:text-primary-100 cursor-pointer active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
@@ -194,7 +194,7 @@ export function MediaSection({
             第 {currentPage} / {totalPages} 頁
           </span>
           <button
-            className="rounded-lg border border-surface-700 px-3 py-1.5 font-semibold transition-all duration-200 hover:border-primary-500/50 hover:text-primary-100 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-surface-700 px-3 py-1.5 font-semibold transition-all duration-200 hover:border-primary-500/50 hover:text-primary-100 cursor-pointer active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}

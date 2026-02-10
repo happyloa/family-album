@@ -151,6 +151,15 @@ export function AdminActionModal({
     return { errorMessage: '', helperMessage: '', sanitizedName: '', sanitizedPath: '' };
   }, [action, target, inputValue, sanitizeName, sanitizePath, maxNameLength, baseName, maxDepth, currentPrefix, getDepth]);
 
+  // Body scroll lock
+  useEffect(() => {
+    if (!action || !target) return;
+    document.body.classList.add('modal-open');
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [action, target]);
+
   if (!action || !target) return null;
 
   const confirmDisabled = Boolean(errorMessage) || isSubmitting;
@@ -181,13 +190,13 @@ export function AdminActionModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex min-h-screen w-screen items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex min-h-screen w-screen items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md animate-modal-backdrop-in"
       onClick={onCancel}
       role="dialog"
       aria-modal="true"
     >
       <div
-        className="w-[min(560px,92vw)] overflow-hidden rounded-3xl border border-slate-700/50 bg-slate-900/95 shadow-2xl"
+        className="w-[min(560px,92vw)] overflow-hidden rounded-3xl border border-slate-700/50 bg-slate-900/95 shadow-2xl animate-modal-content-in"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="border-b border-slate-800 px-5 py-4">
@@ -260,16 +269,16 @@ export function AdminActionModal({
           {!errorMessage && helperMessage ? <p className="text-sm text-cyan-300">{helperMessage}</p> : null}
 
           {isSubmitting ? <div className="flex items-center gap-2 rounded-2xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-200">
-              <span
-                className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-300/70 border-t-transparent"
-                aria-hidden="true"
-              />
-              <span>
-                {action === 'rename' && '正在處理中，若內容較多可能需要數秒...'}
-                {action === 'move' && '正在搬移中，請稍候...'}
-                {action === 'delete' && '正在刪除中...'}
-              </span>
-            </div> : null}
+            <span
+              className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-300/70 border-t-transparent"
+              aria-hidden="true"
+            />
+            <span>
+              {action === 'rename' && '正在處理中，若內容較多可能需要數秒...'}
+              {action === 'move' && '正在搬移中，請稍候...'}
+              {action === 'delete' && '正在刪除中...'}
+            </span>
+          </div> : null}
 
           <div className="flex flex-col gap-3 border-t border-slate-800 pt-4 sm:flex-row sm:justify-end">
             <button
@@ -287,9 +296,9 @@ export function AdminActionModal({
             >
               <span className="flex items-center justify-center gap-2">
                 {isSubmitting ? <span
-                    className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-100/70 border-t-transparent"
-                    aria-hidden="true"
-                  /> : null}
+                  className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-100/70 border-t-transparent"
+                  aria-hidden="true"
+                /> : null}
                 <span>確認</span>
               </span>
             </button>

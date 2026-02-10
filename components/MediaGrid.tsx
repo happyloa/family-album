@@ -272,7 +272,9 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
 
       <MediaPreviewModal
         media={preview.media}
+        allFiles={filteredFiles}
         onClose={() => setPreview({ media: null, trigger: null })}
+        onNavigate={(file) => setPreview((prev) => ({ media: file, trigger: prev.trigger }))}
         triggerElement={preview.trigger}
       />
     </section>

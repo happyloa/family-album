@@ -54,6 +54,47 @@
       transform: translateY(0);
     }
   }
+  /* Modal 動畫 */
+  --animate-modal-backdrop-in: modal-backdrop-in 0.2s ease-out;
+  --animate-modal-content-in: modal-content-in 0.25s
+    cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-toast-slide-in: toast-slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes modal-backdrop-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes modal-content-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.95) translateY(8px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes toast-slide-in {
+    0% {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+}
+
+/* Body scroll lock for modals */
+body.modal-open {
+  overflow: hidden;
 }
 
 :root {
