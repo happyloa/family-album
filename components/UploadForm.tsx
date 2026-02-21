@@ -137,7 +137,7 @@ export function UploadForm({
 
       const compressedName = file.name.replace(/\.[^.]+$/, '.webp');
       return new File([blob], compressedName, { type: 'image/webp' });
-    } catch (error) {
+    } catch {
       updateStatus('圖片壓縮失敗，已改用原始檔案。', 'error');
       return file;
     }
@@ -260,7 +260,7 @@ export function UploadForm({
         }, 5000);
         void fetchBucketUsage();
       }
-    } catch (error) {
+    } catch {
       updateStatus('上傳時發生錯誤，請稍後再試。', 'error');
       setProgress(0);
     } finally {

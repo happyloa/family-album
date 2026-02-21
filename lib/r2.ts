@@ -183,8 +183,9 @@ function ensureArray<T>(value: T | T[] | undefined): T[] {
 // 讀取 XML 文字節點
 function readTextNode(value: unknown): string {
   if (value === undefined || value === null) return "";
-  if (typeof value === "string" || typeof value === "number")
-    {return String(value);}
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
   if (
     typeof value === "object" &&
     "value" in (value as Record<string, unknown>)
@@ -211,7 +212,7 @@ function buildEndpointPath(path: string) {
 // 建構 List Objects URL
 function buildListUrl(
   prefix: string,
-  options: { continuationToken?: string; delimiter?: string } = {}
+  options: { continuationToken?: string; delimiter?: string } = {},
 ) {
   const url = new URL(buildEndpointPath(`/${getEnv().R2_BUCKET_NAME}`));
   url.searchParams.set("list-type", "2");
@@ -254,24 +255,27 @@ function parseListResult(
   xml: string,
   searchPrefix: string,
   includeFolders: boolean,
-  options: { includePrefixObject?: boolean } = {}
+  options: { includePrefixObject?: boolean } = {},
 ): ParsedListResult {
   const parsed = xmlParser.parse(xml).ListBucketResult;
 
   const folders: FolderItem[] = includeFolders
-    ? ensureArray(parsed.CommonPrefixes).map((item: any) => {
-        const prefixKey = readTextNode(item.Prefix);
-        const relativeKey = prefixKey.replace(/\/$/, "");
-        const name = relativeKey.split("/").pop() ?? relativeKey;
-        return { key: relativeKey, name } as FolderItem;
-      })
+    ? ensureArray(parsed.CommonPrefixes).map(
+        (item: Record<string, unknown>) => {
+          const prefixKey = readTextNode(item.Prefix);
+          const relativeKey = prefixKey.replace(/\/$/, "");
+          const name = relativeKey.split("/").pop() ?? relativeKey;
+          return { key: relativeKey, name } as FolderItem;
+        },
+      )
     : [];
 
   const contents = ensureArray(parsed.Contents)
-    .map((item: any) => {
+    .map((item: Record<string, unknown>) => {
       const key = readTextNode(item.Key);
-      if (!key || (!options.includePrefixObject && key === searchPrefix))
-        {return null;}
+      if (!key || (!options.includePrefixObject && key === searchPrefix)) {
+        return null;
+      }
 
       const sizeText = readTextNode(item.Size);
       const lastModified = readTextNode(item.LastModified) || undefined;
@@ -284,12 +288,12 @@ function parseListResult(
     })
     .filter(
       (
-        item
+        item,
       ): item is {
         key: string;
         size: number | undefined;
         lastModified: string | undefined;
-      } => Boolean(item)
+      } => Boolean(item),
     );
 
   const isTruncated = readTextNode(parsed.IsTruncated) === "true";
@@ -303,7 +307,7 @@ function parseListResult(
 // 收集指定 Prefix 下的所有 Key (用於刪除或移動資料夾)
 async function collectKeys(
   prefix: string,
-  options: { includePrefixObject?: boolean } = {}
+  options: { includePrefixObject?: boolean } = {},
 ) {
   const keys: string[] = [];
   let continuationToken: string | undefined;
@@ -314,7 +318,7 @@ async function collectKeys(
     const response = await signedFetch(url.toString());
     if (!response.ok) {
       throw new Error(
-        `Failed to list folder for processing: ${response.status} ${response.statusText}`
+        `Failed to list folder for processing: ${response.status} ${response.statusText}`,
       );
     }
 
@@ -322,7 +326,7 @@ async function collectKeys(
       await response.text(),
       searchPrefix,
       false,
-      options
+      options,
     );
     keys.push(...contents.map((item) => item.key));
     continuationToken = nextContinuationToken;
@@ -338,7 +342,7 @@ type DeleteObjectsOptions = {
 
 async function deleteObjects(
   keys: string[],
-  options: DeleteObjectsOptions = {}
+  options: DeleteObjectsOptions = {},
 ) {
   const totalCount = keys.length;
   let deletedCount = 0;
@@ -361,7 +365,7 @@ async function deleteObjects(
 
     if (!deleteResponse.ok) {
       throw new Error(
-        `Failed to delete objects: ${deleteResponse.status} ${deleteResponse.statusText}`
+        `Failed to delete objects: ${deleteResponse.status} ${deleteResponse.statusText}`,
       );
     }
 
@@ -383,7 +387,7 @@ async function copyObjectWithinBucket(sourceKey: string, targetKey: string) {
 
   if (!copyResponse.ok) {
     throw new Error(
-      `Failed to copy object: ${copyResponse.status} ${copyResponse.statusText}`
+      `Failed to copy object: ${copyResponse.status} ${copyResponse.statusText}`,
     );
   }
 }
@@ -394,18 +398,18 @@ export async function listMedia(prefix = ""): Promise<MediaListing> {
   const searchPrefix = buildFolderKey(normalizedPrefix);
 
   const response = await signedFetch(
-    buildListUrl(searchPrefix, { delimiter: "/" }).toString()
+    buildListUrl(searchPrefix, { delimiter: "/" }).toString(),
   );
   if (!response.ok) {
     throw new Error(
-      `Failed to list objects: ${response.status} ${response.statusText}`
+      `Failed to list objects: ${response.status} ${response.statusText}`,
     );
   }
 
   const { folders, contents } = parseListResult(
     await response.text(),
     searchPrefix,
-    true
+    true,
   );
 
   const files: MediaFile[] = contents.map((item) => ({
@@ -434,7 +438,7 @@ export async function calculateBucketUsage(): Promise<BucketUsage> {
 
     if (!response.ok) {
       throw new Error(
-        `Failed to calculate bucket usage: ${response.status} ${response.statusText}`
+        `Failed to calculate bucket usage: ${response.status} ${response.statusText}`,
       );
     }
 
@@ -444,7 +448,7 @@ export async function calculateBucketUsage(): Promise<BucketUsage> {
       false,
       {
         includePrefixObject: true,
-      }
+      },
     );
 
     totalBytes += contents.reduce((sum, item) => sum + (item.size ?? 0), 0);
@@ -476,7 +480,7 @@ export async function uploadToR2(file: File, targetPrefix = "") {
   }
 
   const key = `${buildFolderKey(
-    normalizedPrefix
+    normalizedPrefix,
   )}${Date.now()}-${sanitizedFileName}`;
   const body = new Uint8Array(await file.arrayBuffer());
 
@@ -493,7 +497,7 @@ export async function uploadToR2(file: File, targetPrefix = "") {
 
   if (!response.ok) {
     throw new Error(
-      `Failed to upload file: ${response.status} ${response.statusText}`
+      `Failed to upload file: ${response.status} ${response.statusText}`,
     );
   }
 
@@ -524,7 +528,7 @@ export async function createFolder(prefix: string, name: string) {
 
   if (!response.ok) {
     throw new Error(
-      `Failed to create folder: ${response.status} ${response.statusText}`
+      `Failed to create folder: ${response.status} ${response.statusText}`,
     );
   }
 
@@ -547,7 +551,7 @@ function removeTrailingExtension(name: string, extension: string) {
 function buildUniqueFileName(
   baseName: string,
   extension: string,
-  existingNames: Set<string>
+  existingNames: Set<string>,
 ) {
   let counter = 2;
   let candidate = extension ? `${baseName}${extension}` : baseName;
@@ -563,7 +567,7 @@ function buildUniqueFileName(
 
 function buildUniqueFileNameForConflict(
   fileName: string,
-  existingNames: Set<string>
+  existingNames: Set<string>,
 ) {
   const extension = extractExtension(fileName);
   const baseName = removeTrailingExtension(fileName, extension);
@@ -573,7 +577,7 @@ function buildUniqueFileNameForConflict(
 // 列出既有檔名集合 (用於檢查衝突)
 async function listExistingFileNames(
   prefix: string,
-  options: { excludeKey?: string } = {}
+  options: { excludeKey?: string } = {},
 ) {
   const listing = await listMedia(prefix);
   const existingNames = new Set<string>();
@@ -646,12 +650,12 @@ export async function renameFile(key: string, newName: string) {
   await copyObjectWithinBucket(sourceKey, targetKey);
 
   const deleteUrl = buildEndpointPath(
-    `/${getEnv().R2_BUCKET_NAME}/${sourceKey}`
+    `/${getEnv().R2_BUCKET_NAME}/${sourceKey}`,
   );
   const deleteResponse = await signedFetch(deleteUrl, { method: "DELETE" });
   if (!deleteResponse.ok && deleteResponse.status !== 404) {
     throw new Error(
-      `Failed to delete old file: ${deleteResponse.status} ${deleteResponse.statusText}`
+      `Failed to delete old file: ${deleteResponse.status} ${deleteResponse.statusText}`,
     );
   }
 
@@ -693,13 +697,13 @@ export async function renameFolder(key: string, newName: string) {
 export async function deleteFile(key: string) {
   const normalizedKey = normalizePath(key);
   const deleteUrl = buildEndpointPath(
-    `/${getEnv().R2_BUCKET_NAME}/${normalizedKey}`
+    `/${getEnv().R2_BUCKET_NAME}/${normalizedKey}`,
   );
   const deleteResponse = await signedFetch(deleteUrl, { method: "DELETE" });
 
   if (!deleteResponse.ok && deleteResponse.status !== 404) {
     throw new Error(
-      `Failed to delete file: ${deleteResponse.status} ${deleteResponse.statusText}`
+      `Failed to delete file: ${deleteResponse.status} ${deleteResponse.statusText}`,
     );
   }
 }
@@ -707,7 +711,7 @@ export async function deleteFile(key: string) {
 // 刪除資料夾 (可選擇移動內容到上一層或全部刪除)
 export async function deleteFolder(
   prefix: string,
-  options: { moveContentsToParent?: boolean } = {}
+  options: { moveContentsToParent?: boolean } = {},
 ) {
   const normalizedPrefix = sanitizePath(prefix);
   const parentPrefix = normalizedPrefix.split("/").slice(0, -1).join("/");
@@ -728,7 +732,7 @@ export async function deleteFolder(
 
       const resolvedName = buildUniqueFileNameForConflict(
         filename,
-        existingNames
+        existingNames,
       );
       existingNames.add(resolvedName);
       const targetKey = safeParentPrefix
@@ -769,12 +773,12 @@ export async function moveFile(key: string, targetPrefix: string) {
   await copyObjectWithinBucket(normalizedKey, newKey);
 
   const deleteUrl = buildEndpointPath(
-    `/${getEnv().R2_BUCKET_NAME}/${normalizedKey}`
+    `/${getEnv().R2_BUCKET_NAME}/${normalizedKey}`,
   );
   const deleteResponse = await signedFetch(deleteUrl, { method: "DELETE" });
   if (!deleteResponse.ok && deleteResponse.status !== 404) {
     throw new Error(
-      `Failed to delete old file after move: ${deleteResponse.status} ${deleteResponse.statusText}`
+      `Failed to delete old file after move: ${deleteResponse.status} ${deleteResponse.statusText}`,
     );
   }
 
@@ -800,9 +804,8 @@ export async function moveFolder(key: string, targetPrefix: string) {
   const targetPrefixKey = buildFolderKey(targetFolderPath);
 
   const keys = await collectKeys(normalizedKey, { includePrefixObject: true });
-  const existingNamesByFolder = await listExistingFileNamesByFolder(
-    targetFolderPath
-  );
+  const existingNamesByFolder =
+    await listExistingFileNamesByFolder(targetFolderPath);
 
   for (const sourceKey of keys) {
     const targetKey = sourceKey.replace(sourcePrefix, targetPrefixKey);
@@ -819,7 +822,7 @@ export async function moveFolder(key: string, targetPrefix: string) {
       existingNamesByFolder.get(targetFolder) ?? new Set<string>();
     const resolvedName = buildUniqueFileNameForConflict(
       fileName,
-      existingNames
+      existingNames,
     );
     existingNames.add(resolvedName);
     existingNamesByFolder.set(targetFolder, existingNames);

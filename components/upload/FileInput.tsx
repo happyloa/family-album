@@ -6,14 +6,12 @@ import { getSizeLimitByMime } from '@/lib/upload/constants';
 
 type FileSelectedListProps = {
     files: File[];
-    imageSizeLabel: string;
-    videoSizeLabel: string;
 };
 
 /**
  * FileSelectedList: 顯示已選取的檔案清單
  */
-export function FileSelectedList({ files, imageSizeLabel, videoSizeLabel }: FileSelectedListProps) {
+export function FileSelectedList({ files }: FileSelectedListProps) {
     if (files.length === 0) return null;
 
     return (
@@ -92,7 +90,7 @@ export function FileInput({
                 onChange={handleChange}
             />
             <p className="text-xs text-slate-400">圖片上限 {imageSizeLabel}，影片上限 {videoSizeLabel}（依設定值）。</p>
-            <FileSelectedList files={files} imageSizeLabel={imageSizeLabel} videoSizeLabel={videoSizeLabel} />
+            <FileSelectedList files={files} />
         </label>
     );
 }
