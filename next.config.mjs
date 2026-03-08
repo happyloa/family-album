@@ -71,10 +71,6 @@ const nextConfig = {
             value: contentSecurityPolicy,
           },
           {
-            key: "Content-Security-Policy-Report-Only",
-            value: contentSecurityPolicy,
-          },
-          {
             key: "X-Frame-Options",
             value: "DENY",
           },
