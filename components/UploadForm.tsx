@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   MAX_IMAGE_SIZE_MB,
+  MAX_TOTAL_SIZE_MB,
   MAX_VIDEO_SIZE_MB,
   getSizeLimitByMime
 } from '@/lib/upload/constants';
@@ -38,7 +39,6 @@ export function UploadForm({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const resetFeedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const MAX_TOTAL_SIZE_MB = 400;
   const BUCKET_LIMIT_BYTES = 10 * 1024 * 1024 * 1024; // 10GB
 
   const updateStatus = (text: string, tone: 'info' | 'success' | 'error' = 'info') => {
@@ -364,28 +364,28 @@ export function UploadForm({
           {loading ? '處理中...' : '上傳檔案'}
         </button>
         {(loading || progress > 0) ? <div className="flex w-full flex-col gap-2 rounded-xl border border-slate-700/50 bg-slate-900/50 p-3">
-            <div className="flex items-center justify-between text-xs font-semibold text-cyan-300">
-              <span>上傳進度</span>
-              <span>{progress}%</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-teal-500 transition-[width] duration-200"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div> : null}
+          <div className="flex items-center justify-between text-xs font-semibold text-cyan-300">
+            <span>上傳進度</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-teal-500 transition-[width] duration-200"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div> : null}
         {status ? <p
-            className={`text-sm font-semibold ${statusTone === 'success'
-                ? 'text-green-300'
-                : statusTone === 'error'
-                  ? 'text-red-300'
-                  : 'text-cyan-300'
-              }`}
-            aria-live="polite"
-          >
-            {status}
-          </p> : null}
+          className={`text-sm font-semibold ${statusTone === 'success'
+            ? 'text-green-300'
+            : statusTone === 'error'
+              ? 'text-red-300'
+              : 'text-cyan-300'
+            }`}
+          aria-live="polite"
+        >
+          {status}
+        </p> : null}
       </div>
     </form>
   );
