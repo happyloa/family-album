@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { requireAdmin } from "@/lib/ensure-admin";
+import { uploadToR2 } from "@/lib/r2";
 import {
   MAX_FILE_COUNT,
   MAX_IMAGE_SIZE_BYTES,
   MAX_TOTAL_SIZE_MB,
   getSizeLimitByMime,
-} from "./constants";
-
-import { requireAdmin } from "@/lib/ensure-admin";
-import { uploadToR2 } from "@/lib/r2";
+} from "@/lib/upload/constants";
 
 // 使用 Edge Runtime 以符合 Cloudflare Pages 的執行環境。
 export const runtime = "edge";

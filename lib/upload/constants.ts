@@ -26,3 +26,6 @@ export function getSizeLimitByMime(type: string | undefined) {
   if (type.startsWith("video/")) return MAX_VIDEO_SIZE_BYTES;
   return null;
 }
+
+export const MAX_TOTAL_SIZE_MB = 400;
+export const MAX_FILE_COUNT = 20;
