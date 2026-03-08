@@ -59,9 +59,9 @@ lib/           # 共用函式庫
 | `R2_BUCKET_NAME`                                      | ✅   | 儲存媒體的 bucket 名稱                 |
 | `R2_PUBLIC_BASE`                                      | ✅   | 公開讀取的基底 URL                     |
 | `ADMIN_ACCESS_TOKEN`                                  | ✅   | 管理密碼（最長 15 字）                 |
-| `ADMIN_RATE_LIMIT_MAX_FAILURES`                       | ⬜️  | 密碼錯誤嘗試次數（預設 5 次 / 5 分鐘） |
-| `MAX_IMAGE_SIZE_MB` / `NEXT_PUBLIC_MAX_IMAGE_SIZE_MB` | ⬜️  | 圖片單檔上限（預設 10MB）              |
-| `MAX_VIDEO_SIZE_MB` / `NEXT_PUBLIC_MAX_VIDEO_SIZE_MB` | ⬜️  | 影片單檔上限（預設 150MB）             |
+| `ADMIN_RATE_LIMIT_MAX_FAILURES`                       | ⬜️   | 密碼錯誤嘗試次數（預設 5 次 / 5 分鐘） |
+| `MAX_IMAGE_SIZE_MB` / `NEXT_PUBLIC_MAX_IMAGE_SIZE_MB` | ⬜️   | 圖片單檔上限（預設 10MB）              |
+| `MAX_VIDEO_SIZE_MB` / `NEXT_PUBLIC_MAX_VIDEO_SIZE_MB` | ⬜️   | 影片單檔上限（預設 150MB）             |
 
 ## API 速查
 
@@ -78,32 +78,3 @@ lib/           # 共用函式庫
 1. 在 Pages 專案設定中新增上述環境變數
 2. `next.config.mjs` 已配置 Edge Runtime，無需額外調整
 3. 若使用自訂網域，確認 `R2_PUBLIC_BASE` 與實際公開位址一致
-
-## 疑難排解
-
-- **密碼總是被拒絕**：確認 `ADMIN_ACCESS_TOKEN` 是否與 `x-admin-token` header 完全一致，並檢查是否觸發限流。
-- **上傳被檔案大小限制阻擋**：調整 `MAX_IMAGE_SIZE_MB`、`MAX_VIDEO_SIZE_MB` 後重新部署。
-
-## R2 特性說明
-
-由於本專案使用 Cloudflare R2（S3-compatible Object Storage），以下為正常的系統行為：
-
-### 圖片載入延遲
-
-圖片載入時可能出現短暫延遲，這是由以下因素組成：
-
-1. **Next.js Image 優化流程**：使用 `next/image` 時，圖片需經過 Image Optimization API 處理（下載原圖 → 轉換尺寸/格式 → 傳送）
-2. **R2 首次存取延遲**：較少存取的物件可能有「冷啟動」延遲
-3. **網路距離**：R2 的地理位置可能與用戶端有一定距離
-
-> 💡 **緩解方式**：本專案已使用 blur placeholder 與漸進式載入動畫，提供較好的感知體驗。
-
-### 資料夾重命名/移動時暫時出現新舊兩個
-
-重命名或移動資料夾時，可能短暫看到新舊兩個資料夾同時存在，這是 Object Storage 的正常行為：
-
-- S3/R2 沒有原生的「重命名」API，必須透過「複製到新位置 → 刪除舊物件」實作
-- 在複製完成但刪除尚未完成時，列表查詢會同時看到新舊兩個項目
-- 資料夾內容越多，完成時間越長
-
-> 💡 **緩解方式**：UI 會在操作完成後自動重新整理；若仍看到重複項目，請稍等幾秒後手動重新整理。
