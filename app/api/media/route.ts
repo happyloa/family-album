@@ -4,6 +4,7 @@ import {
   MAX_FOLDER_DEPTH,
   MAX_FOLDER_NAME_LENGTH,
 } from "@/components/media/constants";
+import { getDepth } from "@/components/media/sanitize";
 import { requireAdmin } from "@/lib/ensure-admin";
 import {
   createFolder,
@@ -18,10 +19,6 @@ import {
 
 // 設定 Edge Runtime 以相容 Cloudflare Pages 部署
 export const runtime = "edge";
-
-// 計算路徑深度，用於限制巢狀層級
-const getDepth = (path: string) =>
-  path ? path.split("/").filter(Boolean).length : 0;
 
 // 驗證建立資料夾請求
 export function validateCreateFolder(prefix: string, name: string | undefined) {
