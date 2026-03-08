@@ -189,10 +189,10 @@ export function MediaPreviewModal({
         onClick={(event) => event.stopPropagation()}
         ref={dialogRef}
       >
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-800 px-5 py-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-white" id={titleId}>
+              <p className="text-sm font-semibold text-white break-all" id={titleId}>
                 {mediaName}
               </p>
               {canNavigate ? (

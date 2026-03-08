@@ -44,7 +44,7 @@ export function FolderGrid({
         {folders.map((folder) => (
           <article
             key={folder.key}
-            className="group relative flex cursor-pointer flex-col gap-3 rounded-2xl border border-surface-700/50 bg-surface-800/50 p-4 shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-primary-500/40 hover:bg-surface-800/80 hover:shadow-xl focus-within:-translate-y-1 focus-within:border-primary-500/40"
+            className="group relative flex min-w-0 cursor-pointer flex-col gap-3 rounded-2xl border border-surface-700/50 bg-surface-800/50 p-4 shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-primary-500/40 hover:bg-surface-800/80 hover:shadow-xl focus-within:-translate-y-1 focus-within:border-primary-500/40"
             role="button"
             tabIndex={0}
             onClick={() => onEnter(folder.key)}
@@ -72,27 +72,27 @@ export function FolderGrid({
               </div>
             </div>
             {isAdmin ? <div className="flex flex-wrap items-center gap-2 text-sm text-surface-300">
-                <button
-                  className="rounded-full bg-surface-700/50 px-3 py-1 text-xs font-semibold text-surface-200 transition-all duration-200 hover:bg-surface-700 hover:text-white cursor-pointer"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onRename(folder.key);
-                  }}
-                >
-                  重新命名
-                </button>
-                <button
-                  className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-300 transition-all duration-200 hover:bg-red-500/25 hover:text-red-200 cursor-pointer"
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onDelete(folder.key);
-                  }}
-                >
-                  刪除
-                </button>
-              </div> : null}
+              <button
+                className="rounded-full bg-surface-700/50 px-3 py-1 text-xs font-semibold text-surface-200 transition-all duration-200 hover:bg-surface-700 hover:text-white cursor-pointer"
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRename(folder.key);
+                }}
+              >
+                重新命名
+              </button>
+              <button
+                className="rounded-full bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-300 transition-all duration-200 hover:bg-red-500/25 hover:text-red-200 cursor-pointer"
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDelete(folder.key);
+                }}
+              >
+                刪除
+              </button>
+            </div> : null}
           </article>
         ))}
       </div>
