@@ -89,9 +89,8 @@ export function FolderGrid({
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500/20 to-primary-600/10 text-2xl ring-1 ring-primary-500/20">
           📂
         </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          <h4 className="truncate text-lg font-semibold text-white">{folder.name || '未命名'}</h4>
-          <p className="truncate text-xs text-surface-500">{folder.key || '根目錄'}</p>
+        <div className="min-w-0 flex-1">
+          <h4 className="text-lg font-semibold text-white">{folder.name || '未命名'}</h4>
         </div>
       </div>
       {isAdmin ? <div className="flex flex-wrap items-center gap-2 text-sm text-surface-300">
