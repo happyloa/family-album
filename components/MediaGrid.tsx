@@ -227,6 +227,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
             onDelete={(key) => openAdminActionModal('delete', key, true)}
             canDropMedia={isAdmin ? isDraggingMedia : false}
             onDropMedia={(targetKey) => void moveDraggedMediaTo(targetKey)}
+            isRootLevel={currentPrefix === ''}
           />
 
           <MediaSection
