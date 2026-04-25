@@ -87,9 +87,10 @@ export function UploadForm({
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0B';
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-    const value = bytes / 1024 ** index;
-    return `${value.toFixed(value >= 10 ? 0 : 2)}${units[index]}`;
+    // 改用 base-1000 算法以貼近多數雲端服務業者的顯示方式
+    const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1000)), units.length - 1);
+    const value = bytes / 1000 ** index;
+    return `${value.toFixed(index >= 2 ? 1 : 0)} ${units[index]}`;
   };
 
   const formatSizeLabel = (sizeMb: number) => {
