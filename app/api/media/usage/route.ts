@@ -1,12 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { calculateBucketUsage } from '@/lib/r2';
 
 export const runtime = 'edge';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const usage = await calculateBucketUsage();
+    const force = request.nextUrl.searchParams.get("force") === "true";
+    const usage = await calculateBucketUsage(force);
     return NextResponse.json(usage);
   } catch (error) {
     console.error('Failed to calculate bucket usage', error);

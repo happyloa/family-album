@@ -92,6 +92,14 @@ const xmlParser = new XMLParser({
 
 let cachedClient: AwsClient | null = null;
 
+// R2 容量統計記憶體快取
+let cachedUsage: { totalBytes: number; timestamp: number } | null = null;
+const CACHE_TTL_MS = 30 * 1000; // 30 秒
+
+export function clearUsageCache() {
+  cachedUsage = null;
+}
+
 // 初始化並快取 AWS Client (aws4fetch)
 function getClient() {
   if (cachedClient) return cachedClient;
@@ -428,7 +436,12 @@ export async function listMedia(prefix = ""): Promise<MediaListing> {
 }
 
 // 計算整個 Bucket 的已使用容量（以位元組為單位）
-export async function calculateBucketUsage(): Promise<BucketUsage> {
+export async function calculateBucketUsage(force = false): Promise<BucketUsage> {
+  const now = Date.now();
+  if (!force && cachedUsage && (now - cachedUsage.timestamp < CACHE_TTL_MS)) {
+    return { totalBytes: cachedUsage.totalBytes } satisfies BucketUsage;
+  }
+
   let continuationToken: string | undefined;
   let totalBytes = 0;
 
@@ -455,6 +468,7 @@ export async function calculateBucketUsage(): Promise<BucketUsage> {
     continuationToken = nextContinuationToken;
   } while (continuationToken);
 
+  cachedUsage = { totalBytes, timestamp: Date.now() };
   return { totalBytes } satisfies BucketUsage;
 }
 
@@ -501,6 +515,7 @@ export async function uploadToR2(file: File, targetPrefix = "") {
     );
   }
 
+  clearUsageCache();
   return {
     key,
     url: encodeKeyForUrl(key, getEnv().R2_PUBLIC_BASE),
@@ -532,6 +547,7 @@ export async function createFolder(prefix: string, name: string) {
     );
   }
 
+  clearUsageCache();
   return { key: folderPath, name: normalizedName } satisfies FolderItem;
 }
 
@@ -659,6 +675,7 @@ export async function renameFile(key: string, newName: string) {
     );
   }
 
+  clearUsageCache();
   return {
     key: newKey,
     url: encodeKeyForUrl(targetKey, getEnv().R2_PUBLIC_BASE),
@@ -689,6 +706,7 @@ export async function renameFolder(key: string, newName: string) {
 
   await deleteObjects(keys);
 
+  clearUsageCache();
   return {
     key: newFolderPath,
     name: newFolderPath.split("/").pop() || newFolderPath,
@@ -708,6 +726,7 @@ export async function deleteFile(key: string) {
       `Failed to delete file: ${deleteResponse.status} ${deleteResponse.statusText}`,
     );
   }
+  clearUsageCache();
 }
 
 // 刪除資料夾 (可選擇移動內容到上一層或全部刪除)
@@ -754,6 +773,7 @@ export async function deleteFolder(
   }
 
   await deleteObjects(keys);
+  clearUsageCache();
 }
 
 // 移動檔案
@@ -791,6 +811,7 @@ export async function moveFile(key: string, targetPrefix: string) {
     );
   }
 
+  clearUsageCache();
   return {
     key: newKey,
     url: encodeKeyForUrl(newKey, getEnv().R2_PUBLIC_BASE),
@@ -852,6 +873,7 @@ export async function moveFolder(key: string, targetPrefix: string) {
 
   await deleteObjects(keys);
 
+  clearUsageCache();
   return {
     key: targetFolderPath,
     name: targetFolderPath.split("/").pop() || targetFolderPath,

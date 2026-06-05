@@ -58,11 +58,11 @@ export function UploadForm({
     };
   }, []);
 
-  const fetchBucketUsage = useCallback(async () => {
+  const fetchBucketUsage = useCallback(async (force = false) => {
     setUsageLoading(true);
     try {
       setUsageError('');
-      const response = await fetch('/api/media/usage');
+      const response = await fetch(`/api/media/usage${force ? '?force=true' : ''}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch usage');
@@ -259,7 +259,7 @@ export function UploadForm({
           setStatus('');
           setStatusTone('info');
         }, 5000);
-        void fetchBucketUsage();
+        void fetchBucketUsage(true);
       }
     } catch {
       updateStatus('上傳時發生錯誤，請稍後再試。', 'error');
