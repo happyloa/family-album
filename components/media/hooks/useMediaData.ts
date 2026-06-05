@@ -7,14 +7,13 @@ type FilterOption = 'all' | 'image' | 'video';
 
 type UseMediaDataProps = {
   pushMessage: (text: string, tone: 'info' | 'success' | 'error') => void;
-  refreshToken?: number;
 };
 
 /**
  * useMediaData Hook: 媒體資料管理
  * 包含：API 資料載入、過濾 (Filter)、搜尋 (Search) 與分頁 (Pagination)
  */
-export function useMediaData({ pushMessage, refreshToken }: UseMediaDataProps) {
+export function useMediaData({ pushMessage }: UseMediaDataProps) {
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,11 +61,11 @@ export function useMediaData({ pushMessage, refreshToken }: UseMediaDataProps) {
     [currentPrefix, pushMessage]
   );
 
-  // 當路徑或 Refresh Token 改變時重新載入
+  // 當路徑改變時重新載入
   useEffect(() => {
     void loadMedia(currentPrefix);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshToken, currentPrefix]);
+  }, [currentPrefix]);
 
   const hasImages = useMemo(() => files.some((file) => file.type === 'image'), [files]);
   const hasVideos = useMemo(() => files.some((file) => file.type === 'video'), [files]);

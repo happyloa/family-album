@@ -9,8 +9,6 @@ import { MediaGrid } from '@/components/MediaGrid';
  * 包含標題區塊與主要的媒體網格 (MediaGrid)
  */
 export default function Home() {
-  const refreshToken = 0; // 用於觸發 MediaGrid 重新整理的 key
-
   return (
     <section className="space-y-8" aria-label="家庭相簿首頁">
       {/* 媒體列表區塊：使用 Suspense 處理載入狀態 */}
@@ -24,7 +22,7 @@ export default function Home() {
           </div>
         }
       >
-        <MediaGrid refreshToken={refreshToken} />
+        <MediaGrid />
       </Suspense>
     </section>
   );

@@ -38,7 +38,7 @@ type PreviewState = {
  * MediaGrid Component: 專案核心元件
  * 整合了媒體瀏覽、資料夾導覽、管理員權限驗證、上傳與檔案操作功能。
  */
-export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
+export function MediaGrid() {
   const { message, messageTone, pushMessage } = useMessage();
 
   const {
@@ -59,7 +59,7 @@ export function MediaGrid({ refreshToken = 0 }: { refreshToken?: number }) {
     filteredFiles,
     filterVisible,
     searchEnabled
-  } = useMediaData({ pushMessage, refreshToken });
+  } = useMediaData({ pushMessage });
 
   const {
     adminToken,
