@@ -113,13 +113,14 @@ export function MediaGrid() {
     handleAdminActionConfirm
   });
 
-  // 選取項目順序：資料夾在前、可見檔案在後（供範圍選取）
+  // 選取項目順序：資料夾在前、檔案在後（供範圍選取）。
+  // 用「已篩選的完整清單」而非僅可見清單，避免排序/捲動重設 visibleCount 時誤清選取。
   const orderedIds = useMemo(
     () => [
       ...folders.map((folder) => makeSelectionId(folder.key, true)),
-      ...visibleFiles.map((file) => makeSelectionId(file.key, false))
+      ...filteredFiles.map((file) => makeSelectionId(file.key, false))
     ],
-    [folders, visibleFiles]
+    [folders, filteredFiles]
   );
   const selection = useSelection(orderedIds);
   const { menu, openMenu, closeMenu } = useContextMenu();
@@ -438,6 +439,7 @@ export function MediaGrid() {
     Boolean(preview.media) ||
     Boolean(adminAction) ||
     Boolean(moveItems) ||
+    newFolderOpen ||
     Boolean(passwordReq) ||
     Boolean(confirmReq);
 

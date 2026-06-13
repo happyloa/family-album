@@ -57,8 +57,15 @@ export function MovePickerModal({
     setBrowsePrefix(startPrefix);
     setSubmitting(false);
     document.body.classList.add('modal-open');
-    return () => document.body.classList.remove('modal-open');
-  }, [open, startPrefix]);
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.body.classList.remove('modal-open');
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [open, startPrefix, onCancel]);
 
   useEffect(() => {
     if (open) void load(browsePrefix);

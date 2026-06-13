@@ -19,17 +19,21 @@ export function NewFolderModal({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) {
-      setValue('');
-      setSubmitting(false);
-      document.body.classList.add('modal-open');
-      const timer = window.setTimeout(() => inputRef.current?.focus(), 50);
-      return () => {
-        document.body.classList.remove('modal-open');
-        window.clearTimeout(timer);
-      };
-    }
-  }, [open]);
+    if (!open) return;
+    setValue('');
+    setSubmitting(false);
+    document.body.classList.add('modal-open');
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 50);
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.body.classList.remove('modal-open');
+      window.clearTimeout(timer);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [open, onCancel]);
 
   if (!open) return null;
 
