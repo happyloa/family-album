@@ -235,10 +235,9 @@ export function useMediaActions({
     }
   };
 
-  // 批次刪除
-  const handleBatchDelete = async (items: BatchItem[]) => {
+  // 把刪除送到伺服器（樂觀移除與 Undo 由呼叫端負責，這裡不再動本地清單或顯示成功訊息）
+  const commitDeleteOnServer = async (items: BatchItem[]) => {
     if (items.length === 0) return;
-    removeLocalItems(items);
     try {
       const response = await authorizedFetch("/api/media", {
         method: "DELETE",
@@ -246,14 +245,13 @@ export function useMediaActions({
         body: JSON.stringify({ action: "batch-delete", items }),
       });
       if (!response.ok) {
-        pushMessage("批次刪除失敗，請稍後再試", "error");
+        pushMessage("刪除失敗，請稍後再試", "error");
         await loadMedia(currentPrefix, { silent: true });
         return;
       }
-      pushMessage(`已刪除 ${items.length} 個項目`, "success");
       scheduleReconcile();
     } catch {
-      pushMessage("批次刪除時發生錯誤，請稍後再試。", "error");
+      pushMessage("刪除時發生錯誤，請稍後再試。", "error");
       await loadMedia(currentPrefix, { silent: true });
     }
   };
@@ -265,6 +263,6 @@ export function useMediaActions({
     openAdminActionModal,
     handleAdminActionConfirm,
     handleBatchMove,
-    handleBatchDelete,
+    commitDeleteOnServer,
   };
 }

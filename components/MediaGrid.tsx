@@ -28,6 +28,7 @@ import { MediaSkeleton } from './media/MediaSkeleton';
 import { MessageToast } from './media/MessageToast';
 import { MovePickerModal } from './media/MovePickerModal';
 import { NewFolderModal } from './media/NewFolderModal';
+import { UndoToast } from './media/UndoToast';
 import { PasswordPromptModal } from './media/PasswordPromptModal';
 import { SelectionToolbar } from './media/SelectionToolbar';
 import { getDepth, sanitizeName, sanitizePath } from './media/sanitize';
@@ -93,7 +94,7 @@ export function MediaGrid() {
     openAdminActionModal,
     handleAdminActionConfirm,
     handleBatchMove,
-    handleBatchDelete
+    commitDeleteOnServer
   } = useMediaActions({
     authorizedFetch,
     requestAdminToken,
@@ -128,6 +129,12 @@ export function MediaGrid() {
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
+
+  // 刪除的 Undo 視窗：先樂觀移除並排程，數秒內可復原
+  const UNDO_WINDOW_MS = 6000;
+  const [pendingDelete, setPendingDelete] = useState<{ key: string; isFolder: boolean }[] | null>(null);
+  const pendingDeleteRef = useRef<{ key: string; isFolder: boolean }[] | null>(null);
+  const deleteTimerRef = useRef<number | null>(null);
 
   // 切換資料夾時清除選取（僅依路徑變動觸發）
   useEffect(() => {
@@ -349,7 +356,7 @@ export function MediaGrid() {
           label: `刪除所選 (${selection.selectedCount})`,
           icon: '🗑️',
           danger: true,
-          onSelect: () => void handleBatchDeleteClick()
+          onSelect: () => void requestDelete(selection.selectedItems)
         }
       ];
     }
@@ -359,24 +366,72 @@ export function MediaGrid() {
       { label: '重新命名', icon: '✏️', onSelect: () => void openAdminActionModal('rename', target.key, target.isFolder) },
       { label: '移動', icon: '📁', onSelect: () => void openMove([{ key: target.key, isFolder: target.isFolder }]) },
       { type: 'separator' },
-      { label: '刪除', icon: '🗑️', danger: true, onSelect: () => void openAdminActionModal('delete', target.key, target.isFolder) }
+      { label: '刪除', icon: '🗑️', danger: true, onSelect: () => void requestDelete([{ key: target.key, isFolder: target.isFolder }]) }
     ];
   }, [menu.target, selection.selectionMode, selection.selectedCount, files]);
 
-  // ── 批次操作 ──
-  const handleBatchDeleteClick = async () => {
-    const items = selection.selectedItems;
-    if (items.length === 0) return;
-    const ok = await confirm({
-      title: '刪除所選項目',
-      message: `確定刪除選取的 ${items.length} 個項目？資料夾會連同內容一併刪除，此操作無法復原。`,
-      confirmLabel: '刪除',
-      danger: true
-    });
-    if (!ok) return;
-    selection.clear();
-    await handleBatchDelete(items);
+  // ── 刪除（含 Undo 視窗）──
+  // 把尚在 Undo 視窗的刪除確實送出（換資料夾或卸載時無法跨資料夾復原）
+  const flushPendingDelete = () => {
+    if (deleteTimerRef.current) {
+      window.clearTimeout(deleteTimerRef.current);
+      deleteTimerRef.current = null;
+    }
+    const pending = pendingDeleteRef.current;
+    pendingDeleteRef.current = null;
+    setPendingDelete(null);
+    if (pending && pending.length) void commitDeleteOnServer(pending);
   };
+  const flushRef = useRef(flushPendingDelete);
+  flushRef.current = flushPendingDelete;
+
+  const startUndoableDelete = (items: { key: string; isFolder: boolean }[]) => {
+    flushPendingDelete(); // 先送出上一批，避免堆疊
+    removeLocalItems(items);
+    selection.clear();
+    pendingDeleteRef.current = items;
+    setPendingDelete(items);
+    deleteTimerRef.current = window.setTimeout(() => {
+      deleteTimerRef.current = null;
+      const pending = pendingDeleteRef.current;
+      pendingDeleteRef.current = null;
+      setPendingDelete(null);
+      if (pending) void commitDeleteOnServer(pending);
+    }, UNDO_WINDOW_MS);
+  };
+
+  const undoDelete = () => {
+    if (deleteTimerRef.current) {
+      window.clearTimeout(deleteTimerRef.current);
+      deleteTimerRef.current = null;
+    }
+    pendingDeleteRef.current = null;
+    setPendingDelete(null);
+    void loadMedia(currentPrefix, { silent: true });
+    pushMessage('已復原刪除', 'info');
+  };
+
+  const requestDelete = async (items: { key: string; isFolder: boolean }[]) => {
+    if (items.length === 0) return;
+    const allowed = await requestAdminToken('請輸入管理密碼以刪除項目');
+    if (!allowed) return;
+    // 含資料夾的刪除較具破壞性，先確認
+    if (items.some((item) => item.isFolder)) {
+      const ok = await confirm({
+        title: '刪除項目',
+        message: `確定刪除選取的 ${items.length} 個項目？資料夾會連同內容一併刪除（可在數秒內復原）。`,
+        confirmLabel: '刪除',
+        danger: true
+      });
+      if (!ok) return;
+    }
+    startUndoableDelete(items);
+  };
+
+  // 換資料夾或卸載時，把待刪除確實送出
+  useEffect(() => {
+    return () => flushRef.current();
+  }, [currentPrefix]);
 
   // ── 鍵盤快捷鍵：Ctrl/Cmd+A 全選、Esc 清除、Delete 刪除所選 ──
   const anyModalOpen =
@@ -413,12 +468,12 @@ export function MediaGrid() {
       }
       if ((event.key === 'Delete' || event.key === 'Backspace') && selection.selectionMode) {
         event.preventDefault();
-        void handleBatchDeleteClick();
+        void requestDelete(selection.selectedItems);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [anyModalOpen, isAdmin, selection, folders.length, visibleFiles.length, handleBatchDeleteClick]);
+  }, [anyModalOpen, isAdmin, selection, folders.length, visibleFiles.length]);
 
   const hasItems = files.length > 0 || folders.length > 0;
   const filterLabel = filterVisible ? (filter === 'all' ? '全部' : filter === 'image' ? '僅圖片' : '僅影片') : '全部';
@@ -665,9 +720,11 @@ export function MediaGrid() {
       <SelectionToolbar
         count={selection.selectedCount}
         onMove={() => void openMove(selection.selectedItems)}
-        onDelete={() => void handleBatchDeleteClick()}
+        onDelete={() => void requestDelete(selection.selectedItems)}
         onClear={selection.clear}
       />
+
+      <UndoToast open={Boolean(pendingDelete)} count={pendingDelete?.length ?? 0} onUndo={undoDelete} />
 
       <DropzoneOverlay
         active={dropActive && isAdmin}
